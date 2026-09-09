@@ -1,12 +1,20 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { gunzipSync } from "node:zlib";
 import type { NextConfig } from "next";
 
 function materializeForecastCache() {
   const dir = path.join(process.cwd(), "data");
   const gzPath = path.join(dir, "latest.json.gz");
   const b64Path = path.join(dir, "latest.b64");
-  if (existsSync(gzPath)) return;
+  if (existsSync(gzPath)) {
+    try {
+      gunzipSync(readFileSync(gzPath));
+      return;
+    } catch {
+      // File troncato da un bollettino incompleto: ricomponi.
+    }
+  }
   let b64 = existsSync(b64Path) ? readFileSync(b64Path, "utf8") : "";
   if (!b64) {
     const bulletin = path.join(dir, "bulletin");
@@ -21,7 +29,9 @@ function materializeForecastCache() {
     }
   }
   if (!b64) return;
-  writeFileSync(gzPath, Buffer.from(b64, "base64"));
+  const gz = Buffer.from(b64, "base64");
+  gunzipSync(gz);
+  writeFileSync(gzPath, gz);
 }
 
 try {

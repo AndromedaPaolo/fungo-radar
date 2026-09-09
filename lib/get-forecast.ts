@@ -1,11 +1,10 @@
 import { buildSnapshot } from "./forecast";
 import { fetchAllSiteWeather } from "./weather";
 import { getAllSites } from "./sites";
-import { isSnapshotStale, readSnapshotFile, writeSnapshotFile } from "./cache";
+import { readSnapshotFile, writeSnapshotFile } from "./cache";
 import type { ForecastSnapshot } from "./types";
 
 let memory: ForecastSnapshot | null = null;
-let inflight: Promise<ForecastSnapshot> | null = null;
 
 export async function refreshForecast(persist = true): Promise<ForecastSnapshot> {
   const catalog = await getAllSites();
@@ -23,25 +22,15 @@ export async function refreshForecast(persist = true): Promise<ForecastSnapshot>
 }
 
 export async function getForecast(): Promise<ForecastSnapshot> {
-  if (memory && !isSnapshotStale(memory)) return memory;
+  if (memory) return memory;
 
   const file = await readSnapshotFile();
-  if (file && !isSnapshotStale(file)) {
+  if (file) {
     memory = file;
     return file;
   }
 
-  if (inflight) return inflight;
-  inflight = refreshForecast(true)
-    .catch((error: unknown) => {
-      if (file) {
-        memory = file;
-        return file;
-      }
-      throw error;
-    })
-    .finally(() => {
-      inflight = null;
-    });
-  return inflight;
+  throw new Error(
+    "Bollettino del giorno non ancora pronto. Torna dopo l'aggiornamento di mezzanotte.",
+  );
 }
