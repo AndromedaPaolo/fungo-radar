@@ -1,0 +1,38 @@
+name: Concat b64 parts
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/concat-b64.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  concat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Concatenate numbered parts
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for p in aa ab ac ad; do
+            parts=(data/latest.b64.${p}.??)
+            if [ ${#parts[@]} -eq 0 ]; then
+              echo "skip ${p}"
+              continue
+            fi
+            cat "${parts[@]}" > "data/latest.b64.${p}"
+            wc -c "data/latest.b64.${p}"
+          done
+      - name: Commit concatenated files
+        run: |
+          git config user.name "spora-bot"
+          git config user.email "spora-bot@users.noreply.github.com"
+          git add data/latest.b64.aa data/latest.b64.ab data/latest.b64.ac data/latest.b64.ad || true
+          git diff --cached --quiet && echo "Nessun cambiamento" && exit 0
+          git commit -m "chore: bollettino concatenate aa-ad"
+          git push
