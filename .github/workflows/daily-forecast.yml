@@ -1,0 +1,29 @@
+name: Previsione di mezzanotte
+
+on:
+  schedule:
+    - cron: "0 22 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx tsx scripts/refresh.ts
+      - name: Pubblica il bollettino
+        run: |
+          git config user.name "spora-bot"
+          git config user.email "spora-bot@users.noreply.github.com"
+          git add data/latest.json.gz data/latest.b64
+          git diff --cached --quiet && echo "Nessun cambiamento" && exit 0
+          git commit -m "chore: aggiornamento previsione funghi $(date -u +%F)"
+          git push
