@@ -1,82 +1,151 @@
-import type { MushroomSite } from "./types";
+import { AREAS, type AreaId } from "./geo";
+import { MASSA_SITES } from "./sites-massa";
+import { buildLocalGrid } from "./grid";
+import { buildItalyFragments, buildParianaPasquilioHotspot, withTreeKinds } from "./hotspots";
+import { inParianaPasquilio } from "./trees";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
+import path from "node:path";
+import type { Habitat, Site } from "./types";
 
-export const SITES: MushroomSite[] = [
-  {
-    id: "pariana-pasquilio",
-    name: "Pariana – Pasquilio",
-    municipality: "Massa",
-    province: "MS",
-    region: "Toscana",
-    center: { lat: 44.086, lon: 10.175 },
-    bounds: { south: 44.06, west: 10.14, north: 44.11, east: 10.21 },
-    elevationMin: 650,
-    elevationMax: 1350,
-    area: "versante Tirreno, Alpi Apuane",
-    geology: "calcareo-dolomitico, flysch arenaceo, argilliti",
-    slope: "ripido, esposizione ovest-sudovest",
-    rainfall: "1400–1800 mm/anno, nebbia estiva frequente",
-    iemStation: "LIML",
-    asosStation: "LIML",
-    weatherLabel: "Massa (LIML)",
-    gridFile: "grid-massa.json",
-    description:
-      "Versante tirrenico delle Alpi Apuane, dal Castello di Gragnana (650 m) al crinale del Monte Pasquilio (1.350 m). Faggete, castagneti da frutto e boschi misti su substrato calcareo-dolomitico. Zone di raccolta: Costa Palombaia, Canalaccio, Sorgente delle Canevone, Sorgente della Salsa, Passo Tambura.",
-    trees: [
-      { name: "Faggio", latin: "Fagus sylvatica", elevation: "900–1350 m", role: "dominante in alta quota, micorrizico" },
-      { name: "Castagno", latin: "Castanea sativa", elevation: "650–1000 m", role: "castagneti da frutto, micorrizico" },
-      { name: "Leccio", latin: "Quercus ilex", elevation: "650–850 m", role: "versante soleggiato, micorrizico" },
-      { name: "Roverella", latin: "Quercus pubescens", elevation: "650–900 m", role: "versante xerico, micorrizico" },
-      { name: "Carpino nero", latin: "Ostrya carpinifolia", elevation: "700–1100 m", role: "bosco misto, micorrizico" },
-      { name: "Orniello", latin: "Fraxinus ornus", elevation: "650–1000 m", role: "bosco misto" },
-      { name: "Pino marittimo", latin: "Pinus pinaster", elevation: "650–900 m", role: "rimboschimenti, micorrizico" },
-      { name: "Abete bianco", latin: "Abies alba", elevation: "1000–1300 m", role: "nuclei relitti, micorrizico" },
-    ],
-    species: [
-      { name: "Porcino", latin: "Boletus edulis", season: "set–nov", habitat: "faggeta, castagneto", notes: "specie principale, dopo piogge autunnali" },
-      { name: "Porcino nero", latin: "Boletus aereus", season: "giu–set", habitat: "lecceta, roverella", notes: "estivo, versante soleggiato" },
-      { name: "Porcino pinicola", latin: "Boletus pinophilus", season: "set–nov", habitat: "faggeta, pino", notes: "più tardivo del edulis" },
-      { name: "Galletto", latin: "Cantharellus cibarius", season: "giu–ott", habitat: "faggeta umida, muschio", notes: "Canalaccio, Sorgente Salsa" },
-      { name: "Ovolo buono", latin: "Amanita caesarea", season: "giu–set", habitat: "castagneto, roverella", notes: "estivo, dopo temporali" },
-      { name: "Finferle", latin: "Craterellus lutescens", season: "ott–dic", habitat: "conifere, umido", notes: "tardivo, pinete" },
-      { name: "Prugnolo", latin: "Calocybe gambosa", season: "apr–mag", habitat: "bosco misto, orli", notes: "primaverile" },
-      { name: "Imbutino", latin: "Infundibulicybe geotropa", season: "ott–nov", habitat: "faggeta, radure", notes: "autunnale tardivo" },
-    ],
-    zones: [
-      {
-        id: "costa-palombaia",
-        name: "Costa Palombaia",
-        type: "castagneto/faggeta",
-        elevation: "800–1100 m",
-        description: "Versante occidentale sotto il crinale, mix di castagno e faggio. Zona classica per porcini dopo le piogge di settembre.",
-      },
-      {
-        id: "canalaccio",
-        name: "Canalaccio",
-        type: "faggeta umida",
-        elevation: "900–1200 m",
-        description: "Impluvio fresco e umido, muschio abbondante. Galletti e porcini. Nebbia frequente in estate.",
-      },
-      {
-        id: "sorgente-canevone",
-        name: "Sorgente delle Canevone",
-        type: "faggeta",
-        elevation: "1000–1200 m",
-        description: "Zona di alta quota intorno alla sorgente, faggio puro. Porcini pinicola e edulis.",
-      },
-      {
-        id: "sorgente-salsa",
-        name: "Sorgente della Salsa",
-        type: "faggeta/muschio",
-        elevation: "950–1150 m",
-        description: "Ambiente umido permanente, muschio e humus. Galletti, finferle in autunno.",
-      },
-      {
-        id: "passo-tambura",
-        name: "Passo Tambura",
-        type: "crinale/faggeta",
-        elevation: "1100–1350 m",
-        description: "Crinale ventoso tra Massa e Garfagnana. Faggeta d'alta quota, stagione più breve e tardiva.",
-      },
-    ],
-  },
+type Row = [
+  id: string,
+  name: string,
+  region: string,
+  province: string,
+  lat: number,
+  lon: number,
+  habitat: Habitat,
+  edge?: boolean,
 ];
+
+const ITALY: Row[] = [
+  ["paneveggio", "Foresta di Paneveggio", "Trentino-Alto Adige", "Trento", 46.308, 11.54, "conifera"],
+  ["val-di-fiemme", "Val di Fiemme", "Trentino-Alto Adige", "Trento", 46.29, 11.47, "conifera"],
+  ["carezza", "Latemar – Carezza", "Trentino-Alto Adige", "Bolzano", 46.347, 11.59, "conifera"],
+  ["cansiglio", "Foresta del Cansiglio", "Veneto", "Belluno", 46.07, 12.41, "faggio"],
+  ["asiago", "Altopiano di Asiago", "Veneto", "Vicenza", 45.875, 11.509, "faggio"],
+  ["baldo", "Monte Baldo", "Veneto", "Verona", 45.72, 10.837, "faggio"],
+  ["cortina", "Cortina – Faloria", "Veneto", "Belluno", 46.54, 12.135, "conifera"],
+  ["tarvisio", "Foresta di Tarvisio", "Friuli-Venezia Giulia", "Udine", 46.505, 13.578, "conifera"],
+  ["sauris", "Sauris – Carnia", "Friuli-Venezia Giulia", "Udine", 46.466, 12.708, "conifera"],
+  ["cogne", "Cogne – Gran Paradiso", "Valle d'Aosta", "Aosta", 45.608, 7.356, "conifera"],
+  ["salbertrand", "Gran Bosco di Salbertrand", "Piemonte", "Torino", 45.072, 6.888, "conifera"],
+  ["alta-langa", "Alta Langa", "Piemonte", "Cuneo", 44.51, 8.21, "castagno", true],
+  ["ossola", "Valle Ossola", "Piemonte", "Verbano-Cusio-Ossola", 46.12, 8.29, "conifera"],
+  ["valdieri", "Valdieri – Alpi Marittime", "Piemonte", "Cuneo", 44.277, 7.398, "faggio"],
+  ["penice", "Monte Penice", "Lombardia", "Pavia", 44.8, 9.32, "faggio"],
+  ["orobie", "Orobie – Val Brembana", "Lombardia", "Bergamo", 45.95, 9.65, "misto"],
+  ["stelvio", "Stelvio – val Zebrù", "Lombardia", "Sondrio", 46.47, 10.42, "conifera"],
+  ["aveto", "Foresta dell'Aveto", "Liguria", "Genova", 44.45, 9.38, "faggio"],
+  ["parmense", "Appennino Parmense", "Emilia-Romagna", "Parma", 44.45, 10.01, "faggio"],
+  ["cimone", "Monte Cimone", "Emilia-Romagna", "Modena", 44.194, 10.701, "faggio"],
+  ["camaldoli", "Camaldoli", "Toscana", "Arezzo", 43.813, 11.821, "faggio"],
+  ["abetone", "Abetone", "Toscana", "Pistoia", 44.145, 10.665, "faggio"],
+  ["amiata", "Monte Amiata", "Toscana", "Grosseto", 42.891, 11.626, "castagno"],
+  ["vallombrosa", "Vallombrosa", "Toscana", "Firenze", 43.732, 11.558, "faggio"],
+  ["casentino", "Foreste Casentinesi", "Toscana", "Arezzo", 43.78, 11.82, "faggio"],
+  ["chianti", "Montagnola Senese", "Toscana", "Siena", 43.28, 11.25, "quercia", true],
+  ["sibillini", "Monti Sibillini", "Marche", "Macerata", 42.824, 13.275, "faggio"],
+  ["catria", "Monte Catria", "Marche", "Pesaro e Urbino", 43.462, 12.705, "faggio"],
+  ["terminillo", "Terminillo", "Lazio", "Rieti", 42.473, 12.997, "faggio"],
+  ["simbruini", "Livata – Simbruini", "Lazio", "Roma", 41.95, 13.11, "faggio"],
+  ["gran-sasso", "Gran Sasso – Campo Imperatore", "Abruzzo", "L'Aquila", 42.44, 13.56, "faggio"],
+  ["majella", "Majella – Blockhaus", "Abruzzo", "Pescara", 42.14, 14.11, "faggio"],
+  ["pescasseroli", "Pescasseroli", "Abruzzo", "L'Aquila", 41.808, 13.79, "faggio"],
+  ["laga", "Monti della Laga", "Abruzzo", "Teramo", 42.64, 13.46, "faggio"],
+  ["matese", "Matese – Campitello", "Campania", "Caserta", 41.46, 14.39, "faggio"],
+  ["umbra", "Foresta Umbra", "Puglia", "Foggia", 41.81, 16.0, "faggio"],
+  ["cervati", "Monte Cervati", "Campania", "Salerno", 40.284, 15.428, "faggio"],
+  ["sila-grande", "Sila Grande", "Calabria", "Cosenza", 39.35, 16.5, "conifera"],
+  ["aspromonte", "Gambarie d'Aspromonte", "Calabria", "Reggio Calabria", 38.17, 15.87, "faggio"],
+  ["pollino", "Pollino", "Basilicata", "Potenza", 39.92, 16.2, "faggio"],
+  ["etna", "Linguaglossa – pineta", "Sicilia", "Catania", 37.84, 15.14, "conifera"],
+  ["nebrodi", "Nebrodi", "Sicilia", "Messina", 37.95, 14.7, "faggio"],
+  ["madonie", "Piano Battaglia", "Sicilia", "Palermo", 37.88, 14.02, "faggio"],
+  ["gennargentu", "Gennargentu", "Sardegna", "Nuoro", 40.02, 9.32, "misto"],
+  ["supramonte", "Supramonte – Lanaitto", "Sardegna", "Nuoro", 40.17, 9.49, "misto"],
+];
+
+const PROVINCE_BY_COMUNE: Record<string, { region: string; province: string }> = {
+  Stazzema: { region: "Toscana", province: "Lucca" },
+  Minucciano: { region: "Toscana", province: "Lucca" },
+  "Vagli Sotto": { region: "Toscana", province: "Lucca" },
+  Careggine: { region: "Toscana", province: "Lucca" },
+  Collagna: { region: "Emilia-Romagna", province: "Reggio Emilia" },
+  Ramiseto: { region: "Emilia-Romagna", province: "Reggio Emilia" },
+};
+
+const localSites: Site[] = MASSA_SITES.map(
+  ([id, name, comune, lat, lon, habitat, area, edge, aspect]) => {
+    const place = PROVINCE_BY_COMUNE[comune] ?? {
+      region: "Toscana",
+      province: "Massa-Carrara",
+    };
+    return {
+      id,
+      name,
+      region: place.region,
+      province: place.province,
+      comune,
+      lat,
+      lon,
+      habitat,
+      area,
+      edge,
+      aspect,
+      local: true,
+      kind: "named",
+      hotspot: inParianaPasquilio(lat, lon) ? "pariana-pasquilio" : undefined,
+    };
+  },
+);
+
+const italySites: Site[] = ITALY.map(
+  ([id, name, region, province, lat, lon, habitat, edge]) => ({
+    id,
+    name,
+    region,
+    province,
+    lat,
+    lon,
+    habitat,
+    edge,
+    local: false,
+    kind: "named",
+    hotspot: "italia",
+  }),
+);
+
+export const SITES: Site[] = [...localSites, ...italySites];
+
+const GRID_FILE = path.join(process.cwd(), "data", "grid-massa.json");
+const HOTSPOT_FILE = path.join(process.cwd(), "data", "hotspot-pariana-pasquilio.json");
+
+export async function getAllSites(): Promise<Site[]> {
+  let grid: Site[] = [];
+  try {
+    grid = JSON.parse(await readFile(GRID_FILE, "utf8")) as Site[];
+  } catch {
+    grid = await buildLocalGrid();
+    await mkdir(path.dirname(GRID_FILE), { recursive: true });
+    await writeFile(GRID_FILE, `${JSON.stringify(grid)}\n`, "utf8");
+  }
+
+  let pariana: Site[] = [];
+  try {
+    pariana = JSON.parse(await readFile(HOTSPOT_FILE, "utf8")) as Site[];
+  } catch {
+    pariana = await buildParianaPasquilioHotspot();
+    await mkdir(path.dirname(HOTSPOT_FILE), { recursive: true });
+    await writeFile(HOTSPOT_FILE, `${JSON.stringify(pariana)}\n`, "utf8");
+  }
+
+  const italyFrags = buildItalyFragments(italySites);
+  return withTreeKinds([...localSites, ...grid, ...pariana, ...italySites, ...italyFrags]);
+}
+
+export const REGIONS = [...new Set(SITES.map((site) => site.region))].sort((a, b) =>
+  a.localeCompare(b, "it"),
+);
+
+export { AREAS, type AreaId };

@@ -24,7 +24,11 @@ function materializeForecastCache() {
   writeFileSync(gzPath, Buffer.from(b64, "base64"));
 }
 
-materializeForecastCache();
+try {
+  materializeForecastCache();
+} catch {
+  // Bollettino incompleto su GitHub: il build non deve fallire.
+}
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["leaflet"],
