@@ -1,0 +1,97 @@
+import type { LocalStation } from "./types";
+
+/** Nodi piccoli: crinali, valichi, boschi. Meteo da ICON-2I a 2 km. */
+export const SMALL_STATIONS: LocalStation[] = [
+  // Massa-Carrara e Apuane
+  { id: "sir-massa", name: "Massa – pianura", network: "Punto rete locale (ICON-2I 2 km)", lat: 44.038, lon: 10.143, elevationM: 65, size: "piccola", measures: ["pioggia", "vento", "suolo"] },
+  { id: "sir-antona", name: "Antona / Pian della Fioba", network: "Punto rete locale Apuane (ICON-2I 2 km)", lat: 44.076, lon: 10.192, elevationM: 900, size: "piccola", measures: ["pioggia", "vento", "suolo", "temperatura"] },
+  { id: "sir-carrara", name: "Carrara – Castelpoggio", network: "Punto rete locale Apuane (ICON-2I 2 km)", lat: 44.108, lon: 10.118, elevationM: 500, size: "piccola", measures: ["pioggia", "vento", "suolo"] },
+  { id: "sir-campocecina", name: "Campocecina", network: "Punto rete locale Apuane (ICON-2I 2 km)", lat: 44.102, lon: 10.142, elevationM: 1320, size: "piccola", measures: ["pioggia", "vento", "suolo", "temperatura"] },
+  { id: "sir-pasquilio", name: "Pasquilio", network: "Punto rete locale Apuane (ICON-2I 2 km)", lat: 44.0314, lon: 10.1925, elevationM: 790, size: "piccola", measures: ["pioggia", "vento", "suolo"] },
+  { id: "sir-pariana", name: "Pariana", network: "Punto rete locale Apuane (ICON-2I 2 km)", lat: 44.056, lon: 10.176, elevationM: 420, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "sir-equi", name: "Equi Terme", network: "Punto rete locale Apuane (ICON-2I 2 km)", lat: 44.148, lon: 10.152, elevationM: 250, size: "piccola", measures: ["pioggia", "umidità", "suolo"] },
+  { id: "sir-fivizzano", name: "Fivizzano", network: "Punto rete SIR Toscana (ICON-2I 2 km)", lat: 44.238, lon: 10.126, elevationM: 330, size: "piccola", measures: ["pioggia", "vento", "suolo"] },
+  { id: "sir-cerreto", name: "Passo del Cerreto", network: "Punto rete Appennino (ICON-2I 2 km)", lat: 44.304, lon: 10.234, elevationM: 1261, size: "piccola", measures: ["pioggia", "vento", "suolo", "temperatura"] },
+  { id: "sir-lagastrello", name: "Passo del Lagastrello", network: "Punto rete Appennino (ICON-2I 2 km)", lat: 44.346, lon: 10.176, elevationM: 1200, size: "piccola", measures: ["pioggia", "vento", "suolo"] },
+  { id: "sir-pontremoli", name: "Pontremoli", network: "Punto rete SIR Toscana (ICON-2I 2 km)", lat: 44.376, lon: 9.884, elevationM: 236, size: "piccola", measures: ["pioggia", "vento", "suolo"] },
+  { id: "sir-zeri", name: "Zeri – Chiesa", network: "Punto rete SIR Toscana (ICON-2I 2 km)", lat: 44.354, lon: 9.764, elevationM: 740, size: "piccola", measures: ["pioggia", "vento", "suolo"] },
+  { id: "sir-fosdinovo", name: "Fosdinovo", network: "Punto rete SIR Toscana (ICON-2I 2 km)", lat: 44.134, lon: 10.018, elevationM: 500, size: "piccola", measures: ["pioggia", "vento", "suolo"] },
+  { id: "sir-aulla", name: "Aulla", network: "Punto rete SIR Toscana (ICON-2I 2 km)", lat: 44.215, lon: 9.98, elevationM: 64, size: "piccola", measures: ["pioggia", "vento"] },
+  { id: "sir-comano", name: "Comano", network: "Punto rete SIR Toscana (ICON-2I 2 km)", lat: 44.286, lon: 10.126, elevationM: 530, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "sir-minucciano", name: "Gramolazzo", network: "Punto rete locale Apuane lucchesi (ICON-2I 2 km)", lat: 44.158, lon: 10.268, elevationM: 605, size: "piccola", measures: ["pioggia", "vento", "suolo"] },
+  { id: "sir-abetone", name: "Abetone", network: "Punto rete Appennino tosco-emiliano (ICON-2I 2 km)", lat: 44.145, lon: 10.665, elevationM: 1388, size: "piccola", measures: ["pioggia", "vento", "suolo"] },
+  { id: "sir-camaldoli", name: "Camaldoli", network: "Punto rete Casentino (ICON-2I 2 km)", lat: 43.813, lon: 11.821, elevationM: 1111, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "sir-vallombrosa", name: "Vallombrosa", network: "Punto rete Pratomagno (ICON-2I 2 km)", lat: 43.732, lon: 11.558, elevationM: 958, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "sir-amiata", name: "Monte Amiata", network: "Punto rete Toscana sud (ICON-2I 2 km)", lat: 42.891, lon: 11.626, elevationM: 1738, size: "piccola", measures: ["pioggia", "vento"] },
+  { id: "sir-consuma", name: "Passo della Consuma", network: "Punto rete Casentino (ICON-2I 2 km)", lat: 43.79, lon: 11.598, elevationM: 1070, size: "piccola", measures: ["pioggia", "vento"] },
+
+  // Valle d'Aosta / Piemonte
+  { id: "n-cogne", name: "Cogne", network: "Punto rete alpina (ICON-2I 2 km)", lat: 45.608, lon: 7.356, elevationM: 1534, size: "piccola", measures: ["pioggia", "vento", "suolo"] },
+  { id: "n-cervinia", name: "Breuil-Cervinia", network: "Punto rete alpina (ICON-2I 2 km)", lat: 45.937, lon: 7.631, elevationM: 2050, size: "piccola", measures: ["pioggia", "vento"] },
+  { id: "n-courmayeur", name: "Courmayeur", network: "Punto rete alpina (ICON-2I 2 km)", lat: 45.793, lon: 6.969, elevationM: 1224, size: "piccola", measures: ["pioggia", "vento"] },
+  { id: "n-macugnaga", name: "Macugnaga", network: "Punto rete Ossola (ICON-2I 2 km)", lat: 45.968, lon: 7.968, elevationM: 1327, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-alagna", name: "Alagna Valsesia", network: "Punto rete alpina (ICON-2I 2 km)", lat: 45.854, lon: 7.937, elevationM: 1190, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-sestriere", name: "Sestriere", network: "Punto rete alpina (ICON-2I 2 km)", lat: 44.958, lon: 6.878, elevationM: 2035, size: "piccola", measures: ["pioggia", "vento"] },
+  { id: "n-garessio", name: "Garessio", network: "Punto rete Alto Tanaro (ICON-2I 2 km)", lat: 44.206, lon: 8.014, elevationM: 621, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-oropa", name: "Oropa", network: "Punto rete Biellese (ICON-2I 2 km)", lat: 45.626, lon: 7.979, elevationM: 1180, size: "piccola", measures: ["pioggia"] },
+  { id: "n-salbertrand", name: "Salbertrand – Gran Bosco", network: "Punto rete Cozie (ICON-2I 2 km)", lat: 45.072, lon: 6.888, elevationM: 1010, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-valdieri", name: "Valdieri", network: "Punto rete Alpi Marittime (ICON-2I 2 km)", lat: 44.277, lon: 7.398, elevationM: 774, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-alta-langa", name: "Cortemilia / Alta Langa", network: "Punto rete Langa (ICON-2I 2 km)", lat: 44.58, lon: 8.19, elevationM: 575, size: "piccola", measures: ["pioggia"] },
+
+  // Lombardia
+  { id: "n-livigno", name: "Livigno", network: "Punto rete alpina (ICON-2I 2 km)", lat: 46.538, lon: 10.135, elevationM: 1816, size: "piccola", measures: ["pioggia", "vento"] },
+  { id: "n-bormio", name: "Bormio", network: "Punto rete alpina (ICON-2I 2 km)", lat: 46.469, lon: 10.372, elevationM: 1225, size: "piccola", measures: ["pioggia", "vento"] },
+  { id: "n-aprica", name: "Aprica", network: "Punto rete Orobie (ICON-2I 2 km)", lat: 46.152, lon: 10.152, elevationM: 1181, size: "piccola", measures: ["pioggia"] },
+  { id: "n-ponte-di-legno", name: "Ponte di Legno", network: "Punto rete Adamello (ICON-2I 2 km)", lat: 46.259, lon: 10.509, elevationM: 1258, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-madesimo", name: "Madesimo", network: "Punto rete Spluga (ICON-2I 2 km)", lat: 46.439, lon: 9.359, elevationM: 1550, size: "piccola", measures: ["pioggia"] },
+  { id: "n-valbrembana", name: "Foppolo / Val Brembana", network: "Punto rete Orobie (ICON-2I 2 km)", lat: 46.046, lon: 9.691, elevationM: 1515, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-penice", name: "Passo del Penice", network: "Punto rete Appennino ligure-lombardo (ICON-2I 2 km)", lat: 44.8, lon: 9.32, elevationM: 1149, size: "piccola", measures: ["pioggia", "vento"] },
+
+  // Trentino-Alto Adige / Veneto / Friuli
+  { id: "n-paneveggio", name: "Paneveggio", network: "Punto rete Lagorai (ICON-2I 2 km)", lat: 46.308, lon: 11.54, elevationM: 1530, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-san-martino", name: "San Martino di Castrozza", network: "Punto rete Pale (ICON-2I 2 km)", lat: 46.261, lon: 11.806, elevationM: 1444, size: "piccola", measures: ["pioggia", "vento"] },
+  { id: "n-campiglio", name: "Madonna di Campiglio", network: "Punto rete Brenta (ICON-2I 2 km)", lat: 46.23, lon: 10.826, elevationM: 1550, size: "piccola", measures: ["pioggia", "vento"] },
+  { id: "n-cansiglio", name: "Cansiglio", network: "Punto rete Prealpi (ICON-2I 2 km)", lat: 46.07, lon: 12.41, elevationM: 1100, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-asiago", name: "Asiago", network: "Punto rete Altopiano (ICON-2I 2 km)", lat: 45.875, lon: 11.509, elevationM: 1001, size: "piccola", measures: ["pioggia"] },
+  { id: "n-cortina", name: "Cortina d'Ampezzo", network: "Punto rete Dolomiti (ICON-2I 2 km)", lat: 46.54, lon: 12.135, elevationM: 1211, size: "piccola", measures: ["pioggia", "vento"] },
+  { id: "n-auronzo", name: "Auronzo di Cadore", network: "Punto rete Cadore (ICON-2I 2 km)", lat: 46.55, lon: 12.443, elevationM: 866, size: "piccola", measures: ["pioggia"] },
+  { id: "n-sauris", name: "Sauris", network: "Punto rete Carnia (ICON-2I 2 km)", lat: 46.466, lon: 12.708, elevationM: 1212, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-sella-nevea", name: "Sella Nevea", network: "Punto rete Giulie (ICON-2I 2 km)", lat: 46.387, lon: 13.475, elevationM: 1190, size: "piccola", measures: ["pioggia", "vento"] },
+  { id: "n-piancavallo", name: "Piancavallo", network: "Punto rete Prealpi carniche (ICON-2I 2 km)", lat: 46.107, lon: 12.518, elevationM: 1267, size: "piccola", measures: ["pioggia"] },
+  { id: "n-baldo", name: "Monte Baldo – Novezzina", network: "Punto rete Baldo (ICON-2I 2 km)", lat: 45.72, lon: 10.837, elevationM: 1280, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-lessinia", name: "Bosco Chiesanuova", network: "Punto rete Lessinia (ICON-2I 2 km)", lat: 45.62, lon: 11.032, elevationM: 1100, size: "piccola", measures: ["pioggia"] },
+
+  // Liguria / Emilia
+  { id: "n-aveto", name: "Santo Stefano d'Aveto", network: "Punto rete Aveto (ICON-2I 2 km)", lat: 44.45, lon: 9.45, elevationM: 1012, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-nava", name: "Colle di Nava", network: "Punto rete Liguria (ICON-2I 2 km)", lat: 44.12, lon: 7.88, elevationM: 934, size: "piccola", measures: ["pioggia"] },
+  { id: "n-lago-santo", name: "Lago Santo parmense", network: "Punto rete Appennino parmense (ICON-2I 2 km)", lat: 44.4, lon: 10.01, elevationM: 1507, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-ventasso", name: "Ventasso", network: "Punto rete Appennino reggiano (ICON-2I 2 km)", lat: 44.38, lon: 10.27, elevationM: 1350, size: "piccola", measures: ["pioggia"] },
+
+  // Centro
+  { id: "n-castelluccio", name: "Castelluccio di Norcia", network: "Punto rete Sibillini (ICON-2I 2 km)", lat: 42.828, lon: 13.212, elevationM: 1452, size: "piccola", measures: ["pioggia", "vento"] },
+  { id: "n-catria", name: "Monte Catria", network: "Punto rete Appennino umbro-marchigiano (ICON-2I 2 km)", lat: 43.462, lon: 12.705, elevationM: 1701, size: "piccola", measures: ["pioggia"] },
+  { id: "n-cucco", name: "Monte Cucco", network: "Punto rete Appennino umbro (ICON-2I 2 km)", lat: 43.37, lon: 12.746, elevationM: 1566, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-livata", name: "Monte Livata", network: "Punto rete Simbruini (ICON-2I 2 km)", lat: 41.95, lon: 13.11, elevationM: 1429, size: "piccola", measures: ["pioggia"] },
+  { id: "n-campo-imperatore", name: "Campo Imperatore", network: "Punto rete Gran Sasso (ICON-2I 2 km)", lat: 42.442, lon: 13.558, elevationM: 2130, size: "piccola", measures: ["pioggia", "vento"] },
+  { id: "n-roccaraso", name: "Roccaraso", network: "Punto rete Alto Sangro (ICON-2I 2 km)", lat: 41.85, lon: 14.078, elevationM: 1236, size: "piccola", measures: ["pioggia", "vento"] },
+  { id: "n-pescasseroli", name: "Pescasseroli", network: "Punto rete PN Abruzzo (ICON-2I 2 km)", lat: 41.808, lon: 13.79, elevationM: 1167, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-blockhaus", name: "Blockhaus – Majella", network: "Punto rete Majella (ICON-2I 2 km)", lat: 42.14, lon: 14.11, elevationM: 2143, size: "piccola", measures: ["pioggia", "vento"] },
+  { id: "n-laga", name: "Ceppo – Monti della Laga", network: "Punto rete Laga (ICON-2I 2 km)", lat: 42.64, lon: 13.46, elevationM: 1350, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-capracotta", name: "Capracotta", network: "Punto rete Molise (ICON-2I 2 km)", lat: 41.833, lon: 14.266, elevationM: 1421, size: "piccola", measures: ["pioggia"] },
+  { id: "n-matese", name: "Campitello Matese", network: "Punto rete Matese (ICON-2I 2 km)", lat: 41.46, lon: 14.39, elevationM: 1450, size: "piccola", measures: ["pioggia", "vento"] },
+
+  // Sud e isole
+  { id: "n-laceno", name: "Lago Laceno", network: "Punto rete Irpinia (ICON-2I 2 km)", lat: 40.808, lon: 15.1, elevationM: 1050, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-cervati", name: "Monte Cervati", network: "Punto rete Cilento (ICON-2I 2 km)", lat: 40.284, lon: 15.428, elevationM: 1898, size: "piccola", measures: ["pioggia"] },
+  { id: "n-umbra", name: "Foresta Umbra", network: "Punto rete Gargano (ICON-2I 2 km)", lat: 41.81, lon: 16.0, elevationM: 830, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-sellata", name: "Sellata", network: "Punto rete Potentino (ICON-2I 2 km)", lat: 40.55, lon: 15.75, elevationM: 1400, size: "piccola", measures: ["pioggia"] },
+  { id: "n-pollino", name: "Colle dell'Impiso", network: "Punto rete Pollino (ICON-2I 2 km)", lat: 39.92, lon: 16.2, elevationM: 1575, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-lorica", name: "Lorica – Sila", network: "Punto rete Sila (ICON-2I 2 km)", lat: 39.42, lon: 16.52, elevationM: 1350, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-gambarie", name: "Gambarie d'Aspromonte", network: "Punto rete Aspromonte (ICON-2I 2 km)", lat: 38.17, lon: 15.87, elevationM: 1300, size: "piccola", measures: ["pioggia"] },
+  { id: "n-etna-pineta", name: "Linguaglossa – pineta", network: "Punto rete Etna (ICON-2I 2 km)", lat: 37.84, lon: 15.14, elevationM: 1450, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-battaglia", name: "Piano Battaglia", network: "Punto rete Madonie (ICON-2I 2 km)", lat: 37.88, lon: 14.02, elevationM: 1600, size: "piccola", measures: ["pioggia", "vento"] },
+  { id: "n-cesaro", name: "Cesarò – Nebrodi", network: "Punto rete Nebrodi (ICON-2I 2 km)", lat: 37.845, lon: 14.71, elevationM: 1279, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-fonni", name: "Fonni", network: "Punto rete Gennargentu (ICON-2I 2 km)", lat: 40.12, lon: 9.254, elevationM: 1000, size: "piccola", measures: ["pioggia"] },
+  { id: "n-aritzo", name: "Aritzo", network: "Punto rete Barbagia (ICON-2I 2 km)", lat: 39.955, lon: 9.198, elevationM: 796, size: "piccola", measures: ["pioggia", "suolo"] },
+  { id: "n-tempio", name: "Tempio Pausania", network: "Punto rete Gallura (ICON-2I 2 km)", lat: 40.901, lon: 9.104, elevationM: 566, size: "piccola", measures: ["pioggia"] },
+];
