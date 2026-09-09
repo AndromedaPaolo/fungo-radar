@@ -6,12 +6,16 @@ Non è un oracolo. Non mangiare mai un fungo se non sei certo della specie.
 
 ## Sito pubblico
 
-Apri questo indirizzo (la mappa è online, senza login Vercel):
+Codice: [github.com/AndromedaPaolo/fungo-radar](https://github.com/AndromedaPaolo/fungo-radar)
 
-**https://temporary-quick-thunder-6kipq7p.vercel.app**
+Progetto Vercel: [vercel.com/andromedapaolo/fungo-app](https://vercel.com/andromedapaolo/fungo-app)
 
-Per tenerlo sempre online: [claim del deploy](https://vercel.com/claim-deployment?code=4be6df8b-5c28-45ab-953f-dee69b03da0b) con l’account Vercel collegato a GitHub.
+Dopo il deploy l’indirizzo è:
 
-I nomi `fungo-radar-probe.vercel.app` e `fungo-radar-probe-andromedapaolo.vercel.app` rispondono **404**: il progetto GitHub `fungo-radar-probe` non ha un hostname pubblico (i check su GitHub sono verdi, ma Vercel non pubblica l’alias).
+**https://fungo-app-andromedapaolo.vercel.app**
+
+(`fungo-app.vercel.app` è un altro sito, non questo progetto.)
+
+In Vercel, **fungo-app → Settings → Git** deve essere collegato a `AndromedaPaolo/fungo-radar`, branch `main`. Ogni push su `main` rifà il deploy.
 
 Il bollettino del giorno è nel deploy (`data/latest.json.gz` / `data/bulletin/`), così la mappa non ricalcola il meteo a ogni visita.
