@@ -3,12 +3,26 @@ import { gzipSync, gunzipSync } from "node:zlib";
 import path from "node:path";
 import type { ForecastSnapshot } from "./types";
 
-const CACHE_FILE = path.join(process.cwd(), "data", "latest.json");
-const CACHE_GZ = path.join(process.cwd(), "data", "latest.json.gz");
-const CACHE_B64 = path.join(process.cwd(), "data", "latest.b64");
+const CACHE_DIR = path.join(process.cwd(), "data");
+const CACHE_FILE = path.join(CACHE_DIR, "latest.json");
+const CACHE_GZ = path.join(CACHE_DIR, "latest.json.gz");
+const CACHE_B64 = path.join(CACHE_DIR, "latest.b64");
+const CACHE_PARTS = ["aa", "ab", "ac", "ad", "ae"] as const;
 
 function parseSnapshot(raw: string): ForecastSnapshot {
   return JSON.parse(raw) as ForecastSnapshot;
+}
+
+async function readJoinedB64(): Promise<string> {
+  try {
+    return await readFile(CACHE_B64, "utf8");
+  } catch {
+    const chunks: string[] = [];
+    for (const suffix of CACHE_PARTS) {
+      chunks.push(await readFile(path.join(CACHE_DIR, `latest.b64.${suffix}`), "utf8"));
+    }
+    return chunks.join("");
+  }
 }
 
 export async function readSnapshotFile(): Promise<ForecastSnapshot | null> {
@@ -20,10 +34,8 @@ export async function readSnapshotFile(): Promise<ForecastSnapshot | null> {
       return parseSnapshot(gunzipSync(gz).toString("utf8"));
     } catch {
       try {
-        const b64 = await readFile(CACHE_B64, "utf8");
-        return parseSnapshot(
-          gunzipSync(Buffer.from(b64, "base64")).toString("utf8"),
-        );
+        const b64 = await readJoinedB64();
+        return parseSnapshot(gunzipSync(Buffer.from(b64, "base64")).toString("utf8"));
       } catch {
         return null;
       }
