@@ -1,5 +1,6 @@
 name: Concat b64 parts
 
+# Assemble data/latest.b64.{aa,ab,ac,ad} from numbered chunks.
 on:
   workflow_dispatch:
   push:
