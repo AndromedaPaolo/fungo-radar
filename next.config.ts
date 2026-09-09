@@ -11,10 +11,11 @@ function materializeForecastCache() {
   if (!b64) {
     const bulletin = path.join(dir, "bulletin");
     if (existsSync(bulletin)) {
-      const names = readdirSync(bulletin)
-        .filter((name) => /^p\d{3}$/.test(name))
-        .sort();
-      b64 = names
+      const names = readdirSync(bulletin).sort();
+      const whole = names.filter((name) => /^p\d{3}$/.test(name));
+      const halves = names.filter((name) => /^p\d{3}\.[ab]$/.test(name));
+      const parts = halves.length ? halves : whole;
+      b64 = parts
         .map((name) => readFileSync(path.join(bulletin, name), "utf8"))
         .join("");
     }

@@ -18,12 +18,13 @@ async function readJoinedB64(): Promise<string> {
     return await readFile(CACHE_B64, "utf8");
   } catch {
     const { readdir } = await import("node:fs/promises");
-    const names = (await readdir(BULLETIN_DIR))
-      .filter((name) => /^p\d{3}$/.test(name))
-      .sort();
-    if (!names.length) throw new Error("bollettino assente");
+    const names = (await readdir(BULLETIN_DIR)).sort();
+    const whole = names.filter((name) => /^p\d{3}$/.test(name));
+    const halves = names.filter((name) => /^p\d{3}\.[ab]$/.test(name));
+    const parts = halves.length ? halves : whole;
+    if (!parts.length) throw new Error("bollettino assente");
     const chunks: string[] = [];
-    for (const name of names) {
+    for (const name of parts) {
       chunks.push(await readFile(path.join(BULLETIN_DIR, name), "utf8"));
     }
     return chunks.join("");
