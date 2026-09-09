@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { NextConfig } from "next";
 
@@ -9,10 +9,14 @@ function materializeForecastCache() {
   if (existsSync(gzPath)) return;
   let b64 = existsSync(b64Path) ? readFileSync(b64Path, "utf8") : "";
   if (!b64) {
-    for (const suffix of ["aa", "ab", "ac", "ad", "ae"] as const) {
-      const part = path.join(dir, `latest.b64.${suffix}`);
-      if (!existsSync(part)) break;
-      b64 += readFileSync(part, "utf8");
+    const bulletin = path.join(dir, "bulletin");
+    if (existsSync(bulletin)) {
+      const names = readdirSync(bulletin)
+        .filter((name) => /^p\d{3}$/.test(name))
+        .sort();
+      b64 = names
+        .map((name) => readFileSync(path.join(bulletin, name), "utf8"))
+        .join("");
     }
   }
   if (!b64) return;

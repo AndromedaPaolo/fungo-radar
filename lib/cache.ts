@@ -7,7 +7,7 @@ const CACHE_DIR = path.join(process.cwd(), "data");
 const CACHE_FILE = path.join(CACHE_DIR, "latest.json");
 const CACHE_GZ = path.join(CACHE_DIR, "latest.json.gz");
 const CACHE_B64 = path.join(CACHE_DIR, "latest.b64");
-const CACHE_PARTS = ["aa", "ab", "ac", "ad", "ae"] as const;
+const BULLETIN_DIR = path.join(CACHE_DIR, "bulletin");
 
 function parseSnapshot(raw: string): ForecastSnapshot {
   return JSON.parse(raw) as ForecastSnapshot;
@@ -17,9 +17,14 @@ async function readJoinedB64(): Promise<string> {
   try {
     return await readFile(CACHE_B64, "utf8");
   } catch {
+    const { readdir } = await import("node:fs/promises");
+    const names = (await readdir(BULLETIN_DIR))
+      .filter((name) => /^p\d{3}$/.test(name))
+      .sort();
+    if (!names.length) throw new Error("bollettino assente");
     const chunks: string[] = [];
-    for (const suffix of CACHE_PARTS) {
-      chunks.push(await readFile(path.join(CACHE_DIR, `latest.b64.${suffix}`), "utf8"));
+    for (const name of names) {
+      chunks.push(await readFile(path.join(BULLETIN_DIR, name), "utf8"));
     }
     return chunks.join("");
   }
