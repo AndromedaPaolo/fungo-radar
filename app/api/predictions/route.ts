@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getForecast } from "@/lib/get-forecast";
 
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 export async function GET() {
   try {

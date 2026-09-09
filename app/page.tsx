@@ -2,7 +2,7 @@ import { Dashboard } from "@/components/dashboard";
 import { getForecast } from "@/lib/get-forecast";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 export default async function Home() {
   let snapshot = null;

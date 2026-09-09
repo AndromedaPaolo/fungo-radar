@@ -2,7 +2,7 @@ import { revalidateTag } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { refreshForecast } from "@/lib/get-forecast";
 
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 function authorized(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
