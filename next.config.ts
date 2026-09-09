@@ -43,7 +43,16 @@ try {
 const nextConfig: NextConfig = {
   serverExternalPackages: ["leaflet"],
   outputFileTracingIncludes: {
-    "*": ["./data/**/*"],
+    "*": [
+      "./data/latest.json.gz",
+      "./data/latest.b64",
+      "./data/bulletin/**",
+      "./data/grid-massa.json",
+      "./data/hotspot-pariana-pasquilio.json",
+    ],
+  },
+  outputFileTracingExcludes: {
+    "*": ["./data/latest.json"],
   },
 };
 
