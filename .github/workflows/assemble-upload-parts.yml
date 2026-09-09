@@ -1,0 +1,56 @@
+name: assemble-upload-parts
+on:
+  push:
+    paths:
+      - ".upload-parts/READY"
+permissions:
+  contents: write
+concurrency:
+  group: assemble-upload-parts
+  cancel-in-progress: false
+jobs:
+  assemble:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble exact files from parts
+        run: |
+          node << 'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const root = '.upload-parts';
+          if (!fs.existsSync(path.join(root, 'READY'))) {
+            console.log('no READY marker');
+            process.exit(0);
+          }
+          const names = fs.readdirSync(root).filter((n) => /\.part\d+$/.test(n)).sort();
+          const groups = {};
+          for (const name of names) {
+            const m = name.match(/^(.*)\.part(\d+)$/);
+            if (!m) continue;
+            const dest = m[1].replace(/__/g, '/');
+            const idx = Number(m[2]);
+            (groups[dest] ||= [])[idx] = fs.readFileSync(path.join(root, name), 'utf8');
+          }
+          for (const [dest, parts] of Object.entries(groups)) {
+            for (let i = 0; i < parts.length; i++) {
+              if (typeof parts[i] !== 'string') {
+                throw new Error('missing part ' + dest + ' index ' + i);
+              }
+            }
+            const content = parts.join('');
+            const dir = path.dirname(dest);
+            if (dir && dir !== '.') fs.mkdirSync(dir, { recursive: true });
+            fs.writeFileSync(dest, content);
+            console.log('wrote', dest, content.length);
+          }
+          NODE
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -r --ignore-unmatch .upload-parts
+          git rm --ignore-unmatch .github/workflows/assemble-upload-parts.yml
+          git add -A
+          git status
+          git commit -m "chore: assemble large batch files (02-04, 08)"
+          git push
