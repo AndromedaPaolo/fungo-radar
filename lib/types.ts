@@ -67,6 +67,8 @@ export type Site = {
   local?: boolean;
   kind?: SiteKind;
   hotspot?: HotspotId;
+  parentId?: string;
+  elevationM?: number;
 };
 
 export type DailySeries = {
