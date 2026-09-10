@@ -25,13 +25,16 @@ export async function getForecast(): Promise<ForecastSnapshot> {
   if (memory) return memory;
 
   const file = await readSnapshotFile();
-  if (file) {
-    const catalog = await getAllSites();
-    memory = expandSnapshot(file, catalog);
-    return memory;
+  if (!file) {
+    throw new Error(
+      "Bollettino del giorno non ancora pronto. Torna dopo l'aggiornamento di mezzanotte.",
+    );
   }
 
-  throw new Error(
-    "Bollettino del giorno non ancora pronto. Torna dopo l'aggiornamento di mezzanotte.",
-  );
+  try {
+    memory = expandSnapshot(file, await getAllSites());
+  } catch {
+    memory = file;
+  }
+  return memory;
 }
