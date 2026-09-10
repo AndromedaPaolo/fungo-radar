@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import {
   AlertTriangle,
@@ -41,6 +41,8 @@ import type { Aspect, ForecastSnapshot, SpeciesId, TreeKind } from "@/lib/types"
 import { cn } from "@/lib/utils";
 import type { StationFilter } from "./mushroom-map";
 
+const EMPTY_STATIONS: import("@/lib/types").StationObservation[] = [];
+
 const MushroomMap = dynamic(
   () => import("./mushroom-map").then((mod) => mod.MushroomMap),
   {
@@ -70,6 +72,7 @@ export function Dashboard({
   const [aspectFilter, setAspectFilter] = useState<Aspect | "tutti">("tutti");
   const [edgeFilter, setEdgeFilter] = useState<"tutti" | "orlo" | "dentro">("tutti");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [flyToId, setFlyToId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
@@ -115,6 +118,19 @@ export function Dashboard({
   }, [scoped, speciesFilter, minProb]);
 
   const selected = zones.find((zone) => zone.id === selectedId) ?? null;
+  const preview = zones.find((zone) => zone.id === (hoveredId ?? selectedId)) ?? selected;
+  const inspectRef = useRef<(id: string | null) => void>(() => {});
+  inspectRef.current = setHoveredId;
+  const onInspect = useCallback((id: string | null) => {
+    inspectRef.current(id);
+  }, []);
+  const onSelectFromMap = useCallback((id: string) => {
+    setSelectedId(id);
+    setHoveredId(id);
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches) {
+      setMobileOpen(true);
+    }
+  }, []);
 
   const possibleEdibles = useMemo(() => ediblesInTrees(treeKinds), [treeKinds]);
   const mapTaxa = useMemo(() => groupedTaxa(treeKinds), [treeKinds]);
@@ -355,25 +371,25 @@ export function Dashboard({
               zones={zones}
               selectedId={selectedId}
               flyToId={flyToId}
-              speciesFilter={speciesFilter}
               scope={scope}
-              stations={snapshot.stations ?? []}
+              stations={snapshot.stations ?? EMPTY_STATIONS}
               stationFilter={stationFilter}
-              onSelect={(id) => {
-                setSelectedId(id);
-                setMobileOpen(true);
-              }}
+              onInspect={onInspect}
+              onSelect={onSelectFromMap}
             />
-            {selected ? (
-              <div className="pointer-events-none absolute top-3 left-3 z-[1100] w-[min(calc(100%-1.5rem),20rem)] rounded-xl border border-border/80 bg-background/95 p-3 text-sm shadow-lg backdrop-blur">
-                <p className="font-heading text-lg leading-tight">{selected.frazione}</p>
+            {preview ? (
+              <div className="pointer-events-none absolute top-3 left-3 z-[1100] w-[min(calc(100%-1.5rem),22rem)] rounded-xl border border-border/80 bg-background/95 p-3 text-sm shadow-lg backdrop-blur">
+                <p className="text-[11px] tracking-wide text-muted-foreground uppercase">
+                  {hoveredId && hoveredId !== selectedId ? "Sotto il cursore" : "Bosco selezionato"}
+                </p>
+                <p className="font-heading text-lg leading-tight">{preview.frazione}</p>
                 <p className="text-xs text-muted-foreground">
-                  {TREE_LABEL[selected.treeKind]} · {selected.edge ? "frangente" : "interno"} ·{" "}
-                  {ASPECT_LABEL[selected.aspect]} · {selected.probability}%
+                  {TREE_LABEL[preview.treeKind]} · {preview.edge ? "frangente" : "interno"} ·{" "}
+                  {ASPECT_LABEL[preview.aspect]} · {preview.probability}%
                 </p>
                 <ul className="mt-2 space-y-0.5 text-xs">
-                  {groupedTaxa(selected.treeKinds)
-                    .slice(0, 4)
+                  {groupedTaxa(preview.treeKinds)
+                    .slice(0, 5)
                     .map((row) => (
                       <li key={row.group}>
                         <span className="font-medium">{row.label}: </span>
@@ -387,7 +403,8 @@ export function Dashboard({
               </div>
             ) : (
               <div className="pointer-events-none absolute top-3 left-3 z-[1100] rounded-xl border border-border/80 bg-background/95 px-3 py-2 text-xs text-muted-foreground shadow-lg backdrop-blur">
-                Tocca un cerchio per vedere frazione, bosco e specie.
+                Passa sul cerchio o sul puntino, oppure toccalo: qui compaiono frazione, bosco e
+                specie.
               </div>
             )}
             </>
@@ -431,7 +448,7 @@ export function Dashboard({
             </div>
           ) : null}
           <div className="pointer-events-none absolute bottom-3 left-3 right-3 flex justify-between gap-2 lg:right-auto">
-            <div className="pointer-events-auto max-w-[min(100%,42rem)] rounded-xl border border-border/80 bg-background/90 px-3 py-2 text-[11px] shadow-sm backdrop-blur">
+            <div className="max-w-[min(100%,42rem)] rounded-xl border border-border/80 bg-background/90 px-3 py-2 text-[11px] shadow-sm backdrop-blur">
               <p className="mb-1 font-medium">Colore = tipo di bosco · opacità = probabilità</p>
               <div className="flex flex-wrap gap-2">
                 {TREE_KINDS.map((row) => (
@@ -471,7 +488,7 @@ export function Dashboard({
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent
           side="bottom"
-          className="flex h-[78vh] max-h-[78vh] flex-col gap-0 overflow-hidden p-0 data-[side=bottom]:h-[78vh]"
+          className="flex !h-[78vh] max-h-[78vh] flex-col gap-0 overflow-hidden p-0 data-[side=bottom]:!h-[78vh]"
         >
           <SheetHeader className="shrink-0 px-4 pt-4 pb-2">
             <SheetTitle>Boschi e condizioni</SheetTitle>
@@ -549,7 +566,7 @@ function SiteColumn({
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <ScrollArea className="min-h-48 max-h-[40%] shrink-0 border-b border-border lg:h-52 lg:max-h-none lg:flex-none">
+      <ScrollArea className="min-h-40 max-h-[32%] shrink-0 border-b border-border lg:h-52 lg:max-h-none lg:flex-none">
         {zones.length === 0 ? (
           <p className="px-4 py-8 text-sm text-muted-foreground">
             Nessun bosco con questi filtri. Cambia versante, tipo o abbassa la probabilità.
@@ -617,7 +634,7 @@ function SiteDetail({
   const woods = [...zone.named].sort((a, b) => b.bestProbability - a.bestProbability).slice(0, 14);
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto">
+    <div className="min-h-64 flex-1 overflow-y-auto">
       <div className="space-y-4 p-4">
         <div>
           <p className="flex items-center gap-1 text-xs tracking-wide text-muted-foreground uppercase">
