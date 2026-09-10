@@ -153,20 +153,22 @@ function buildUrl(opts: { models?: string; soil?: boolean; local?: boolean }) {
 export async function fetchAllSiteWeather(
   sites: Site[],
 ): Promise<{ weathers: SiteWeather[]; stations: StationObservation[] }> {
-  const cells = new Map<string, { lat: number; lon: number }>();
+  const siteCells = new Map<string, { lat: number; lon: number }>();
   for (const site of sites) {
     const key = cellKey(site.lat, site.lon);
-    if (!cells.has(key)) cells.set(key, parseKey(key));
+    if (!siteCells.has(key)) siteCells.set(key, parseKey(key));
   }
+  const stationOnly = new Map<string, { lat: number; lon: number }>();
   for (const station of ALL_STATIONS) {
     const key = cellKey(station.lat, station.lon);
-    if (!cells.has(key)) cells.set(key, { lat: station.lat, lon: station.lon });
+    if (siteCells.has(key) || stationOnly.has(key)) continue;
+    stationOnly.set(key, { lat: station.lat, lon: station.lon });
   }
 
-  const cellList = [...cells.entries()].map(([key, coord]) => ({ key, ...coord }));
   const cellWeather = new Map<string, DailySeries & { elevationM: number }>();
 
-  for (const group of chunk(cellList, BATCH)) {
+  const siteList = [...siteCells.entries()].map(([key, coord]) => ({ key, ...coord }));
+  for (const group of chunk(siteList, BATCH)) {
     const lats = group.map((c) => c.lat);
     const lons = group.map((c) => c.lon);
     const best = await fetchJson(buildUrl({ soil: true })(lats, lons));
@@ -196,6 +198,25 @@ export async function fetchAllSiteWeather(
         daily.tempMin = localDaily.tempMin;
         daily.humidityMean = localDaily.humidityMean;
       }
+      cellWeather.set(cell.key, { ...daily, elevationM: Math.round(primary.elevation ?? 0) });
+    });
+  }
+
+  const stationList = [...stationOnly.entries()].map(([key, coord]) => ({ key, ...coord }));
+  for (const group of chunk(stationList, 40)) {
+    const lats = group.map((c) => c.lat);
+    const lons = group.map((c) => c.lon);
+    const local = await fetchJson(
+      buildUrl({ models: "italia_meteo_arpae_icon_2i", local: true })(lats, lons),
+    ).catch(() => null);
+    await sleep(280);
+    if (!local) continue;
+    const localLocs = asLocations(local);
+    group.forEach((cell, index) => {
+      const primary = localLocs[index] ?? localLocs[0];
+      if (!primary) return;
+      const daily = seriesFrom(primary, "local");
+      daily.precipLocalMm = daily.precipMm;
       cellWeather.set(cell.key, { ...daily, elevationM: Math.round(primary.elevation ?? 0) });
     });
   }
@@ -264,7 +285,7 @@ export async function fetchAllSiteWeather(
         "DWD ICON Seamless",
         "Open-Meteo suolo ERA5-Land / IFS",
         "Stazioni Aeronautica Militare / METAR italiane via Iowa Environmental Mesonet",
-        "Nodi locali ICON-2I su crinali e boschi",
+        "Nodi ICON-2I su crinali e boschi di tutta Italia",
       ],
       modelAgreement: agreement(
         daily.precipMm,
