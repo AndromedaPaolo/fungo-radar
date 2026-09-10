@@ -16,6 +16,9 @@ export const metadata = {
   title: "Spora — funghi a Massa-Carrara",
   description:
     "Mappa micologica per frazione, tipo di bosco e versante: Massa-Carrara e tutta Italia.",
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

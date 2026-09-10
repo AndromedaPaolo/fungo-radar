@@ -8,9 +8,7 @@ const CACHE_FILE = path.join(CACHE_DIR, "latest.json");
 const CACHE_GZ = path.join(CACHE_DIR, "latest.json.gz");
 const CACHE_B64 = path.join(CACHE_DIR, "latest.b64");
 const BULLETIN_DIR = path.join(CACHE_DIR, "bulletin");
-const FALLBACK_BULLETIN_URL =
-  process.env.BULLETIN_URL ??
-  "https://temporary-fleet-nickel-gk8jx1e.vercel.app/latest.json.gz";
+const FALLBACK_BULLETIN_URL = process.env.BULLETIN_URL ?? "";
 
 function parseSnapshot(raw: string): ForecastSnapshot {
   return JSON.parse(raw) as ForecastSnapshot;
@@ -28,13 +26,14 @@ async function readJoinedB64(): Promise<string> {
     if (!parts.length) throw new Error("bollettino assente");
     const chunks: string[] = [];
     for (const name of parts) {
-      chunks.push(await readFile(path.join(BULLETIN_DIR, name), "utf8"));
+      chunks.push((await readFile(path.join(BULLETIN_DIR, name), "utf8")).replace(/\s+/g, ""));
     }
     return chunks.join("");
   }
 }
 
 async function readFallbackSnapshot(): Promise<ForecastSnapshot | null> {
+  if (!FALLBACK_BULLETIN_URL) return null;
   try {
     const response = await fetch(FALLBACK_BULLETIN_URL, { cache: "no-store" });
     if (!response.ok) return null;
