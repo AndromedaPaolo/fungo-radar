@@ -1,4 +1,5 @@
 import { SPECIES } from "./species";
+import { haversine } from "./stations";
 import type {
   ForecastSnapshot,
   Site,
@@ -365,13 +366,14 @@ export function buildSnapshot(
     const precipLocal = sum(lastN(weather.daily.precipLocalMm?.length ? weather.daily.precipLocalMm : weather.daily.precipMm, today, 7));
     const precipConsensusMm = (precip7dMm + precipIcon + precipLocal) / 3;
     const trig = triggerIndex(weather.daily.precipMm, today);
+    const elevationM = site.elevationM ?? weather.elevationM;
     const species = (Object.keys(SPECIES) as SpeciesId[]).map((id) =>
-      scoreSpecies(speciesIdSafe(id), site, weather.elevationM, weather),
+      scoreSpecies(speciesIdSafe(id), site, elevationM, weather),
     );
     const best = [...species].sort((a, b) => b.probability - a.probability)[0];
     return {
       site,
-      elevationM: weather.elevationM,
+      elevationM,
       weather: {
         precip7dMm: Math.round(precip7dMm * 10) / 10,
         precip14dMm: Math.round(precip14dMm * 10) / 10,
@@ -428,6 +430,7 @@ export function buildSnapshot(
       "Carta degli alberi: vegetazione forestale Regione Toscana + classificazione dei boschi",
       "Evapotraspirazione FAO ET0 — bilancio idrico della lettiera",
       "Quota Open-Meteo / DEM — griglia 1.2 km sul comprensorio di Massa-Carrara",
+      "Boschi d'Italia: frazioni, versanti e orli come a Massa-Carrara",
     ],
     sites,
     stations: listed,
@@ -442,4 +445,94 @@ export function buildSnapshot(
 
 function speciesIdSafe(id: string): SpeciesId {
   return id as SpeciesId;
+}
+
+export function forecastFromNeighbor(site: Site, donor: SiteForecast): SiteForecast {
+  const elevationM = site.elevationM ?? donor.elevationM;
+  const species = donor.species.map((row) => {
+    const profile = SPECIES[row.speciesId];
+    const prevH = Math.max(habitatFit(donor.site, row.speciesId), 0.08);
+    const nextH = habitatFit(site, row.speciesId);
+    const prevE =
+      donor.elevationM >= profile.elevation[0] - 80 && donor.elevationM <= profile.elevation[1] + 80
+        ? bell(donor.elevationM, profile.elevation[0], profile.elevation[1])
+        : 0.25;
+    const nextE =
+      elevationM >= profile.elevation[0] - 80 && elevationM <= profile.elevation[1] + 80
+        ? bell(elevationM, profile.elevation[0], profile.elevation[1])
+        : 0.25;
+    const scale = (nextH / prevH) * (nextE / Math.max(prevE, 0.12));
+    const probability = Math.round(clamp((row.probability / 100) * scale) * 100);
+    return { ...row, probability };
+  });
+  const best = [...species].sort((a, b) => b.probability - a.probability)[0];
+  return {
+    site,
+    elevationM,
+    weather: donor.weather,
+    species,
+    bestProbability: best?.probability ?? 0,
+    bestSpecies: best?.speciesId ?? null,
+  };
+}
+
+export function expandSnapshot(snapshot: ForecastSnapshot, catalog: Site[]): ForecastSnapshot {
+  const have = new Set(snapshot.sites.map((row) => row.site.id));
+  const donors = snapshot.sites.filter((row) => row.species.length > 0);
+  if (donors.length === 0) return snapshot;
+
+  const bucket = 0.22;
+  const index = new Map<string, SiteForecast[]>();
+  for (const donor of donors) {
+    const key = `${Math.round(donor.site.lat / bucket)}:${Math.round(donor.site.lon / bucket)}`;
+    const list = index.get(key);
+    if (list) list.push(donor);
+    else index.set(key, [donor]);
+  }
+
+  function nearest(site: Site): SiteForecast {
+    const gi = Math.round(site.lat / bucket);
+    const gj = Math.round(site.lon / bucket);
+    let best = donors[0];
+    let bestKm = Infinity;
+    for (let di = -1; di <= 1; di++) {
+      for (let dj = -1; dj <= 1; dj++) {
+        const nearby = index.get(`${gi + di}:${gj + dj}`);
+        if (!nearby) continue;
+        for (const donor of nearby) {
+          const km = haversine(site.lat, site.lon, donor.site.lat, donor.site.lon);
+          if (km < bestKm) {
+            best = donor;
+            bestKm = km;
+          }
+        }
+      }
+    }
+    if (bestKm < Infinity) return best;
+    for (const donor of donors) {
+      const km = haversine(site.lat, site.lon, donor.site.lat, donor.site.lon);
+      if (km < bestKm) {
+        best = donor;
+        bestKm = km;
+      }
+    }
+    return best;
+  }
+
+  const extras: SiteForecast[] = [];
+  for (const site of catalog) {
+    if (have.has(site.id)) continue;
+    extras.push(forecastFromNeighbor(site, nearest(site)));
+  }
+  if (extras.length === 0) return snapshot;
+  const sites = [...snapshot.sites, ...extras];
+  return {
+    ...snapshot,
+    sites,
+    summary: {
+      ...snapshot.summary,
+      sitesScanned: sites.length,
+      sitesWithSignal: sites.filter((row) => row.bestProbability >= 40).length,
+    },
+  };
 }
