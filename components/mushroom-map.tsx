@@ -159,14 +159,39 @@ function FlyTo({ zone }: { zone: MapZone | null }) {
   return null;
 }
 
+function collapseItalyZones(zones: MapZone[], zoom: number, scope: "massa-carrara" | "italia"): MapZone[] {
+  if (scope !== "italia" || zoom >= 8) return zones;
+  const byFrazione = new Map<string, MapZone[]>();
+  for (const zone of zones) {
+    const list = byFrazione.get(zone.frazione);
+    if (list) list.push(zone);
+    else byFrazione.set(zone.frazione, [zone]);
+  }
+  const collapsed: MapZone[] = [];
+  for (const members of byFrazione.values()) {
+    const best = members.reduce((a, b) => (a.probability >= b.probability ? a : b));
+    const lat = members.reduce((sum, zone) => sum + zone.lat, 0) / members.length;
+    const lon = members.reduce((sum, zone) => sum + zone.lon, 0) / members.length;
+    collapsed.push({
+      ...best,
+      lat,
+      lon,
+      radiusM: Math.min(12000, Math.max(6200, members.length * 900)),
+    });
+  }
+  return collapsed;
+}
+
 const WoodCircle = memo(function WoodCircle({
   zone,
   selected,
+  compact,
   onInspect,
   onSelect,
 }: {
   zone: MapZone;
   selected: boolean;
+  compact: boolean;
   onInspect: (id: string | null) => void;
   onSelect: (id: string) => void;
 }) {
@@ -252,8 +277,9 @@ const WoodCircle = memo(function WoodCircle({
           <div className="wood-popup-body">
             <p className="wood-popup-title">{zone.frazione}</p>
             <p>
-              {TREE_LABEL[zone.treeKind]} · {zone.edge ? "frangente" : "interno"} · {zone.aspect} ·{" "}
-              {Math.round(zone.probability)}%
+              {compact
+                ? `${TREE_LABEL[zone.treeKind]} · ${Math.round(zone.probability)}% · zoom per versanti e orli`
+                : `${TREE_LABEL[zone.treeKind]} · ${zone.edge ? "frangente" : "interno"} · ${zone.aspect} · ${Math.round(zone.probability)}%`}
             </p>
             <p>Dettaglio anche nella scheda in alto a sinistra.</p>
           </div>
@@ -262,6 +288,61 @@ const WoodCircle = memo(function WoodCircle({
     </>
   );
 });
+
+function WoodLayer({
+  zones,
+  selectedId,
+  scope,
+  onInspect,
+  onSelect,
+}: {
+  zones: MapZone[];
+  selectedId: string | null;
+  scope: "massa-carrara" | "italia";
+  onInspect: (id: string | null) => void;
+  onSelect: (id: string) => void;
+}) {
+  const map = useMap();
+  const [zoom, setZoom] = useState(map.getZoom());
+  const [bounds, setBounds] = useState(() => map.getBounds());
+
+  useEffect(() => {
+    const update = () => {
+      setZoom(map.getZoom());
+      setBounds(map.getBounds());
+    };
+    map.on("moveend", update);
+    map.on("zoomend", update);
+    return () => {
+      map.off("moveend", update);
+      map.off("zoomend", update);
+    };
+  }, [map]);
+
+  const compact = scope === "italia" && zoom < 8;
+  const drawOrder = useMemo(() => {
+    const collapsed = collapseItalyZones(zones, zoom, scope);
+    const padded = bounds.pad(0.4);
+    return collapsed
+      .filter((zone) => padded.contains(L.latLng(zone.lat, zone.lon)))
+      .sort((a, b) => a.probability - b.probability);
+  }, [bounds, scope, zones, zoom]);
+
+  return (
+    <>
+      {drawOrder.map((zone) => (
+        <WoodCircle
+          key={zone.id}
+          zone={zone}
+          selected={zone.id === selectedId}
+          compact={compact}
+          onInspect={onInspect}
+          onSelect={onSelect}
+        />
+      ))}
+    </>
+  );
+}
 
 export const MushroomMap = memo(function MushroomMap({
   zones,
@@ -282,10 +363,6 @@ export const MushroomMap = memo(function MushroomMap({
   onInspect: (id: string | null) => void;
   onSelect: (id: string) => void;
 }) {
-  const drawOrder = useMemo(
-    () => [...zones].sort((a, b) => a.probability - b.probability),
-    [zones],
-  );
   const visibleStations = stations.filter((station) => {
     if (stationFilter === "nessuna") return false;
     const size = stationSizeOf(station);
@@ -297,8 +374,9 @@ export const MushroomMap = memo(function MushroomMap({
 
   return (
     <MapContainer
-      center={[HOME.lat, HOME.lon]}
-      zoom={11}
+      key={scope}
+      center={scope === "italia" ? [42.5, 12.5] : [HOME.lat, HOME.lon]}
+      zoom={scope === "italia" ? 6 : 11}
       minZoom={6}
       maxZoom={16}
       className="h-full w-full"
@@ -320,15 +398,13 @@ export const MushroomMap = memo(function MushroomMap({
         </Popup>
       </CircleMarker>
       <StationPane />
-      {drawOrder.map((zone) => (
-        <WoodCircle
-          key={zone.id}
-          zone={zone}
-          selected={zone.id === selectedId}
-          onInspect={onInspect}
-          onSelect={onSelect}
-        />
-      ))}
+      <WoodLayer
+        zones={zones}
+        selectedId={selectedId}
+        scope={scope}
+        onInspect={onInspect}
+        onSelect={onSelect}
+      />
       <StationMarkers stations={visibleStations} />
       <FitView zones={zones} scope={scope} />
       <FlyTo zone={zones.find((zone) => zone.id === flyToId) ?? null} />
