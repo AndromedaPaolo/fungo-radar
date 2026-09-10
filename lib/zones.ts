@@ -45,6 +45,7 @@ const ASSIGN_KM = 4.6;
 const MIN_R = 620;
 const MAX_R = 2800;
 const GAP_M = 240;
+const HASH = 0.08;
 
 function aspectOf(site: Site): Aspect {
   return site.aspect ?? "E";
@@ -121,38 +122,63 @@ function zoneName(frazione: string, kind: TreeKind, aspect: Aspect, edge: boolea
   return `${frazione} · ${TREE_LABEL[kind]} · ${orlo} · ${ASPECT_LABEL[aspect]}`;
 }
 
+function hashKey(lat: number, lon: number) {
+  return `${Math.round(lat / HASH)}:${Math.round(lon / HASH)}`;
+}
+
 function separateCircles(zones: MapZone[]): MapZone[] {
   const items = zones.map((zone) => ({ ...zone }));
+  const buckets = new Map<string, number[]>();
+  const rehash = () => {
+    buckets.clear();
+    items.forEach((zone, index) => {
+      const key = hashKey(zone.lat, zone.lon);
+      const list = buckets.get(key);
+      if (list) list.push(index);
+      else buckets.set(key, [index]);
+    });
+  };
+  rehash();
   for (let iter = 0; iter < 48; iter++) {
     let hits = 0;
     for (let i = 0; i < items.length; i++) {
-      for (let j = i + 1; j < items.length; j++) {
-        const a = items[i];
-        const b = items[j];
-        const distM = Math.max(haversine(a.lat, a.lon, b.lat, b.lon) * 1000, 1);
-        const need = a.radiusM + b.radiusM + GAP_M;
-        if (distM >= need) continue;
-        hits += 1;
-        const overflow = need - distM;
-        const shrinkA = a.radiusM > MIN_R ? Math.min(a.radiusM - MIN_R, overflow * 0.38) : 0;
-        const shrinkB = b.radiusM > MIN_R ? Math.min(b.radiusM - MIN_R, overflow * 0.38) : 0;
-        a.radiusM = Math.round(a.radiusM - shrinkA);
-        b.radiusM = Math.round(b.radiusM - shrinkB);
-        const still = a.radiusM + b.radiusM + GAP_M - haversine(a.lat, a.lon, b.lat, b.lon) * 1000;
-        if (still <= 0) continue;
-        const northM = (b.lat - a.lat) * 111_320;
-        const eastM = (b.lon - a.lon) * 111_320 * Math.cos((a.lat * Math.PI) / 180);
-        const len = Math.hypot(northM, eastM) || 1;
-        const push = still / 2 + 12;
-        const movedA = moveMeters(a.lat, a.lon, (-northM / len) * push, (-eastM / len) * push);
-        const movedB = moveMeters(b.lat, b.lon, (northM / len) * push, (eastM / len) * push);
-        a.lat = movedA.lat;
-        a.lon = movedA.lon;
-        b.lat = movedB.lat;
-        b.lon = movedB.lon;
+      const a = items[i];
+      const gi = Math.round(a.lat / HASH);
+      const gj = Math.round(a.lon / HASH);
+      for (let di = -1; di <= 1; di++) {
+        for (let dj = -1; dj <= 1; dj++) {
+          const nearby = buckets.get(`${gi + di}:${gj + dj}`);
+          if (!nearby) continue;
+          for (const j of nearby) {
+            if (j <= i) continue;
+            const b = items[j];
+            const distM = Math.max(haversine(a.lat, a.lon, b.lat, b.lon) * 1000, 1);
+            const need = a.radiusM + b.radiusM + GAP_M;
+            if (distM >= need) continue;
+            hits += 1;
+            const overflow = need - distM;
+            const shrinkA = a.radiusM > MIN_R ? Math.min(a.radiusM - MIN_R, overflow * 0.38) : 0;
+            const shrinkB = b.radiusM > MIN_R ? Math.min(b.radiusM - MIN_R, overflow * 0.38) : 0;
+            a.radiusM = Math.round(a.radiusM - shrinkA);
+            b.radiusM = Math.round(b.radiusM - shrinkB);
+            const still = a.radiusM + b.radiusM + GAP_M - haversine(a.lat, a.lon, b.lat, b.lon) * 1000;
+            if (still <= 0) continue;
+            const northM = (b.lat - a.lat) * 111_320;
+            const eastM = (b.lon - a.lon) * 111_320 * Math.cos((a.lat * Math.PI) / 180);
+            const len = Math.hypot(northM, eastM) || 1;
+            const push = still / 2 + 12;
+            const movedA = moveMeters(a.lat, a.lon, (-northM / len) * push, (-eastM / len) * push);
+            const movedB = moveMeters(b.lat, b.lon, (northM / len) * push, (eastM / len) * push);
+            a.lat = movedA.lat;
+            a.lon = movedA.lon;
+            b.lat = movedB.lat;
+            b.lon = movedB.lon;
+          }
+        }
       }
     }
     if (hits === 0) break;
+    rehash();
   }
   return items.map((zone) => ({
     ...zone,
@@ -175,8 +201,11 @@ export function clusterZones(
     const aspect = aspectOf(site.site);
     const edge = Boolean(site.site.edge);
     let frazione: string;
-    if (!site.site.local) frazione = `it:${italyForestId(site.site)}`;
-    else if (site.site.kind === "named") frazione = site.site.id;
+    if (!site.site.local) {
+      frazione =
+        site.site.parentId ??
+        (site.site.kind === "named" ? site.site.id : `it:${italyForestId(site.site)}`);
+    } else if (site.site.kind === "named") frazione = site.site.id;
     else {
       const near = nearestNamed(site, localNamed);
       if (!near) continue;
@@ -235,5 +264,20 @@ export function clusterZones(
     });
   }
 
-  return separateCircles(raw).sort((a, b) => b.probability - a.probability);
+  const localRaw = raw.filter((zone) => zone.local);
+  const italyRaw = raw.filter((zone) => !zone.local);
+  const italyGroups = new Map<string, MapZone[]>();
+  for (const zone of italyRaw) {
+    const list = italyGroups.get(zone.frazione);
+    if (list) list.push(zone);
+    else italyGroups.set(zone.frazione, [zone]);
+  }
+  const italySeparated: MapZone[] = [];
+  for (const group of italyGroups.values()) {
+    italySeparated.push(...(group.length > 1 ? separateCircles(group) : group));
+  }
+
+  return [...separateCircles(localRaw), ...italySeparated].sort(
+    (a, b) => b.probability - a.probability,
+  );
 }
