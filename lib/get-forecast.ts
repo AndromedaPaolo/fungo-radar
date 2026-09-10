@@ -1,4 +1,4 @@
-import { buildSnapshot } from "./forecast";
+import { buildSnapshot, expandSnapshot } from "./forecast";
 import { fetchAllSiteWeather } from "./weather";
 import { getAllSites } from "./sites";
 import { readSnapshotFile, writeSnapshotFile } from "./cache";
@@ -26,8 +26,9 @@ export async function getForecast(): Promise<ForecastSnapshot> {
 
   const file = await readSnapshotFile();
   if (file) {
-    memory = file;
-    return file;
+    const catalog = await getAllSites();
+    memory = expandSnapshot(file, catalog);
+    return memory;
   }
 
   throw new Error(

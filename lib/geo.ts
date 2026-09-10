@@ -18,7 +18,7 @@ export const AREAS: { id: AreaId; label: string }[] = [
 export const ZONE_CHIPS: { id: ZoneId; label: string }[] = [
   { id: "pariana-pasquilio", label: "Pariana–Pasquilio" },
   ...AREAS,
-  { id: "hotspot-italia", label: "Frangenti Italia" },
+  { id: "hotspot-italia", label: "Boschi e versanti d’Italia" },
 ];
 
 export function kmFromHome(lat: number, lon: number) {

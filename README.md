@@ -1,6 +1,6 @@
 # Spora
 
-Dashboard micologica centrata su **Massa-Carrara**. Sulla mappa un cerchio per **frazione**, **tipo di bosco** e **versante** (frangente o interno), senza sovrapposizioni, con lo stesso schema su tutta Italia. Colore = bosco, opacità = probabilità.
+Dashboard micologica centrata su **Massa-Carrara**, con lo stesso schema di cerchi (frazione, tipo di bosco, versante, orlo) su **tutta Italia**. Colore = bosco, opacità = probabilità.
 
 Non è un oracolo. Non mangiare mai un fungo se non sei certo della specie.
 
@@ -14,7 +14,7 @@ Il bollettino del giorno sta in `data/bulletin/` (parti da 4 KB), così il deplo
 
 ## Cosa mostra
 
-- **Frazioni**: Pariana, Pasquilio, Colonnata, Equi, Cerreto… e i grandi boschi italiani (Paneveggio, Cansiglio, Casentino, Sila, Nebrodi…).
+- **Frazioni**: Pariana, Pasquilio, Colonnata, Equi, Cerreto… e, in ogni regione, boschi e crinali trattati come a Massa (versante, orlo, tipo di bosco). Su **Tutta Italia** ogni frazione ha i cerchi di versante e orlo; da lontano la mappa li unisce, avvicinandoti si separano come a Massa.
 - **Tipo di bosco**: castagneto, faggeta, abetina, pineta… un cerchio un bosco, mai uno sopra l’altro.
 - **Frangente e versante**: nord/sud/est/ovest e orlo vs interno hanno probabilità diverse.
 - **Filtri**: gruppi (Porcini, Colombine, Russole, Galletti, Mazze), tipo di bosco, zona, versante, frangente.
