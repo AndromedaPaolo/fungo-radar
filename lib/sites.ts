@@ -4,8 +4,8 @@ import { ITALY_NAMED_SITES } from "./sites-italy";
 import { buildLocalGrid } from "./grid";
 import { buildParianaPasquilioHotspot, withTreeKinds } from "./hotspots";
 import { inParianaPasquilio } from "./trees";
-import { readFile, writeFile, mkdir } from "node:fs/promises";
-import path from "node:path";
+import massaGrid from "../data/grid-massa.json";
+import parianaHotspot from "../data/hotspot-pariana-pasquilio.json";
 import type { Site } from "./types";
 
 const PROVINCE_BY_COMUNE: Record<string, { region: string; province: string }> = {
@@ -46,28 +46,12 @@ const italySites: Site[] = ITALY_NAMED_SITES;
 
 export const SITES: Site[] = [...localSites, ...italySites];
 
-const GRID_FILE = path.join(process.cwd(), "data", "grid-massa.json");
-const HOTSPOT_FILE = path.join(process.cwd(), "data", "hotspot-pariana-pasquilio.json");
-
 export async function getAllSites(): Promise<Site[]> {
-  let grid: Site[] = [];
-  try {
-    grid = JSON.parse(await readFile(GRID_FILE, "utf8")) as Site[];
-  } catch {
-    grid = await buildLocalGrid();
-    await mkdir(path.dirname(GRID_FILE), { recursive: true });
-    await writeFile(GRID_FILE, `${JSON.stringify(grid)}\n`, "utf8");
-  }
-
-  let pariana: Site[] = [];
-  try {
-    pariana = JSON.parse(await readFile(HOTSPOT_FILE, "utf8")) as Site[];
-  } catch {
-    pariana = await buildParianaPasquilioHotspot();
-    await mkdir(path.dirname(HOTSPOT_FILE), { recursive: true });
-    await writeFile(HOTSPOT_FILE, `${JSON.stringify(pariana)}\n`, "utf8");
-  }
-
+  const grid = (massaGrid as Site[]).length > 0 ? (massaGrid as Site[]) : await buildLocalGrid();
+  const pariana =
+    (parianaHotspot as Site[]).length > 0
+      ? (parianaHotspot as Site[])
+      : await buildParianaPasquilioHotspot();
   return withTreeKinds([...localSites, ...grid, ...pariana, ...italySites]);
 }
 
