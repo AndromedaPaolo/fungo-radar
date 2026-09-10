@@ -6,13 +6,11 @@ Non è un oracolo. Non mangiare mai un fungo se non sei certo della specie.
 
 ## Sito pubblico
 
-**https://temporary-quick-thunder-6kipq7p-jrl4rbtpp-anon-omega-green.vercel.app**
+**https://fungoapp.vercel.app**
 
 Codice: [github.com/AndromedaPaolo/fungo-radar](https://github.com/AndromedaPaolo/fungo-radar)
 
-Se compare il login Vercel invece della mappa: nel progetto apri **Settings → Deployment Protection** e disattiva **Vercel Authentication**.
-
-Il bollettino del giorno è nel deploy (`data/latest.json.gz` / `data/bulletin/`), così la mappa non ricalcola il meteo a ogni visita.
+Il bollettino del giorno sta in `data/bulletin/` (parti da 4 KB), così il deploy ha la mappa senza ricalcolare il meteo a ogni visita.
 
 ## Cosa mostra
 

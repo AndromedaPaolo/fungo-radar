@@ -8,6 +8,9 @@ const CACHE_FILE = path.join(CACHE_DIR, "latest.json");
 const CACHE_GZ = path.join(CACHE_DIR, "latest.json.gz");
 const CACHE_B64 = path.join(CACHE_DIR, "latest.b64");
 const BULLETIN_DIR = path.join(CACHE_DIR, "bulletin");
+const FALLBACK_BULLETIN_URL =
+  process.env.BULLETIN_URL ??
+  "https://temporary-fleet-nickel-gk8jx1e.vercel.app/latest.json.gz";
 
 function parseSnapshot(raw: string): ForecastSnapshot {
   return JSON.parse(raw) as ForecastSnapshot;
@@ -31,6 +34,17 @@ async function readJoinedB64(): Promise<string> {
   }
 }
 
+async function readFallbackSnapshot(): Promise<ForecastSnapshot | null> {
+  try {
+    const response = await fetch(FALLBACK_BULLETIN_URL, { cache: "no-store" });
+    if (!response.ok) return null;
+    const gz = Buffer.from(await response.arrayBuffer());
+    return parseSnapshot(gunzipSync(gz).toString("utf8"));
+  } catch {
+    return null;
+  }
+}
+
 export async function readSnapshotFile(): Promise<ForecastSnapshot | null> {
   try {
     return parseSnapshot(await readFile(CACHE_FILE, "utf8"));
@@ -43,7 +57,7 @@ export async function readSnapshotFile(): Promise<ForecastSnapshot | null> {
         const b64 = await readJoinedB64();
         return parseSnapshot(gunzipSync(Buffer.from(b64, "base64")).toString("utf8"));
       } catch {
-        return null;
+        return readFallbackSnapshot();
       }
     }
   }

@@ -1,7 +1,13 @@
+import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { gunzipSync } from "node:zlib";
 import type { NextConfig } from "next";
+
+/** Public gzip used when GitHub only has an incomplete bulletin. */
+const FALLBACK_BULLETIN_URL =
+  process.env.BULLETIN_URL ??
+  "https://temporary-fleet-nickel-gk8jx1e.vercel.app/latest.json.gz";
 
 function materializeForecastCache() {
   const dir = path.join(process.cwd(), "data");
@@ -28,10 +34,22 @@ function materializeForecastCache() {
         .join("");
     }
   }
-  if (!b64) return;
-  const gz = Buffer.from(b64, "base64");
-  gunzipSync(gz);
-  writeFileSync(gzPath, gz);
+  if (b64) {
+    try {
+      const gz = Buffer.from(b64, "base64");
+      gunzipSync(gz);
+      writeFileSync(gzPath, gz);
+      return;
+    } catch {
+      // Parti su GitHub incomplete o corrotte.
+    }
+  }
+  execFileSync(
+    "curl",
+    ["-fsSL", "--max-time", "45", "-o", gzPath, FALLBACK_BULLETIN_URL],
+    { stdio: "pipe" },
+  );
+  gunzipSync(readFileSync(gzPath));
 }
 
 try {
