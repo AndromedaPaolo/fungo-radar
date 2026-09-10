@@ -70,6 +70,7 @@ export function Dashboard({
   const [aspectFilter, setAspectFilter] = useState<Aspect | "tutti">("tutti");
   const [edgeFilter, setEdgeFilter] = useState<"tutti" | "orlo" | "dentro">("tutti");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [flyToId, setFlyToId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -113,7 +114,7 @@ export function Dashboard({
     return clusterZones(scoped, speciesFilter).filter((zone) => zone.probability >= minProb);
   }, [scoped, speciesFilter, minProb]);
 
-  const selected = zones.find((zone) => zone.id === selectedId) ?? zones[0] ?? null;
+  const selected = zones.find((zone) => zone.id === selectedId) ?? null;
 
   const possibleEdibles = useMemo(() => ediblesInTrees(treeKinds), [treeKinds]);
   const mapTaxa = useMemo(() => groupedTaxa(treeKinds), [treeKinds]);
@@ -142,7 +143,7 @@ export function Dashboard({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-background">
+    <div className="flex h-full min-h-0 flex-1 flex-col bg-background">
       <header className="z-20 border-b border-border/80 bg-[color-mix(in_oklch,var(--background)_88%,var(--primary)_12%)] px-4 py-3 md:px-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -349,9 +350,11 @@ export function Dashboard({
       <div className="grid min-h-0 flex-1 lg:grid-cols-[1fr_400px]">
         <section className="relative min-h-[52vh] lg:min-h-0">
           {snapshot ? (
+            <>
             <MushroomMap
               zones={zones}
-              selectedId={selected?.id ?? null}
+              selectedId={selectedId}
+              flyToId={flyToId}
               speciesFilter={speciesFilter}
               scope={scope}
               stations={snapshot.stations ?? []}
@@ -361,6 +364,33 @@ export function Dashboard({
                 setMobileOpen(true);
               }}
             />
+            {selected ? (
+              <div className="pointer-events-none absolute top-3 left-3 z-[1100] w-[min(calc(100%-1.5rem),20rem)] rounded-xl border border-border/80 bg-background/95 p-3 text-sm shadow-lg backdrop-blur">
+                <p className="font-heading text-lg leading-tight">{selected.frazione}</p>
+                <p className="text-xs text-muted-foreground">
+                  {TREE_LABEL[selected.treeKind]} · {selected.edge ? "frangente" : "interno"} ·{" "}
+                  {ASPECT_LABEL[selected.aspect]} · {selected.probability}%
+                </p>
+                <ul className="mt-2 space-y-0.5 text-xs">
+                  {groupedTaxa(selected.treeKinds)
+                    .slice(0, 4)
+                    .map((row) => (
+                      <li key={row.group}>
+                        <span className="font-medium">{row.label}: </span>
+                        <em>{row.taxa.map((taxon) => taxon.latinName).join(", ")}</em>
+                      </li>
+                    ))}
+                </ul>
+                <p className="mt-2 text-[11px] text-muted-foreground lg:hidden">
+                  Tocca Elenco boschi per pioggia, suolo e giorni alla fuoriuscita.
+                </p>
+              </div>
+            ) : (
+              <div className="pointer-events-none absolute top-3 left-3 z-[1100] rounded-xl border border-border/80 bg-background/95 px-3 py-2 text-xs text-muted-foreground shadow-lg backdrop-blur">
+                Tocca un cerchio per vedere frazione, bosco e specie.
+              </div>
+            )}
+            </>
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
               <Leaf className="size-8 text-primary" />
@@ -430,13 +460,19 @@ export function Dashboard({
             zones={zones}
             selected={selected}
             speciesFilter={speciesFilter}
-            onSelect={setSelectedId}
+            onSelect={(id) => {
+              setSelectedId(id);
+              setFlyToId(id);
+            }}
           />
         </aside>
       </div>
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="bottom" className="h-[78vh] max-h-[78vh] gap-0 overflow-hidden p-0">
+        <SheetContent
+          side="bottom"
+          className="flex h-[78vh] max-h-[78vh] flex-col gap-0 overflow-hidden p-0 data-[side=bottom]:h-[78vh]"
+        >
           <SheetHeader className="shrink-0 px-4 pt-4 pb-2">
             <SheetTitle>Boschi e condizioni</SheetTitle>
           </SheetHeader>
@@ -444,7 +480,10 @@ export function Dashboard({
             zones={zones}
             selected={selected}
             speciesFilter={speciesFilter}
-            onSelect={setSelectedId}
+            onSelect={(id) => {
+              setSelectedId(id);
+              setFlyToId(id);
+            }}
           />
         </SheetContent>
       </Sheet>
@@ -510,7 +549,7 @@ function SiteColumn({
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <ScrollArea className="min-h-48 flex-[2] border-b border-border lg:h-52 lg:flex-none lg:min-h-0">
+      <ScrollArea className="min-h-48 max-h-[40%] shrink-0 border-b border-border lg:h-52 lg:max-h-none lg:flex-none">
         {zones.length === 0 ? (
           <p className="px-4 py-8 text-sm text-muted-foreground">
             Nessun bosco con questi filtri. Cambia versante, tipo o abbassa la probabilità.
@@ -549,7 +588,11 @@ function SiteColumn({
           </ul>
         )}
       </ScrollArea>
-      {selected ? <SiteDetail zone={selected} speciesFilter={speciesFilter} /> : null}
+      {selected ? <SiteDetail zone={selected} speciesFilter={speciesFilter} /> : (
+        <p className="px-4 py-8 text-sm text-muted-foreground">
+          Tocca un cerchio sulla mappa, o un bosco in elenco, per vedere le specie e il meteo.
+        </p>
+      )}
     </div>
   );
 }
@@ -574,7 +617,7 @@ function SiteDetail({
   const woods = [...zone.named].sort((a, b) => b.bestProbability - a.bestProbability).slice(0, 14);
 
   return (
-    <ScrollArea className="min-h-0 flex-1">
+    <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="space-y-4 p-4">
         <div>
           <p className="flex items-center gap-1 text-xs tracking-wide text-muted-foreground uppercase">
@@ -703,7 +746,7 @@ function SiteDetail({
           Non si sovrappone agli altri. Non è un GPS del fungo.
         </p>
       </div>
-    </ScrollArea>
+    </div>
   );
 }
 

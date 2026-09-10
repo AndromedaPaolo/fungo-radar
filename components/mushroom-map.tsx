@@ -79,10 +79,6 @@ function FlyTo({ zone }: { zone: MapZone | null }) {
   const prev = useRef<string | null>(null);
   useEffect(() => {
     if (!zone) return;
-    if (prev.current === null) {
-      prev.current = zone.id;
-      return;
-    }
     if (prev.current === zone.id) return;
     prev.current = zone.id;
     map.fitBounds(zoneBounds(zone).pad(0.18), {
@@ -97,6 +93,7 @@ function FlyTo({ zone }: { zone: MapZone | null }) {
 export function MushroomMap({
   zones,
   selectedId,
+  flyToId,
   speciesFilter,
   scope,
   stations,
@@ -105,6 +102,7 @@ export function MushroomMap({
 }: {
   zones: MapZone[];
   selectedId: string | null;
+  flyToId: string | null;
   speciesFilter: SpeciesId | "tutti";
   scope: "massa-carrara" | "italia";
   stations: StationObservation[];
@@ -129,7 +127,6 @@ export function MushroomMap({
       maxZoom={16}
       className="h-full w-full"
       scrollWheelZoom
-      preferCanvas
     >
       <TileLayer
         attribution="&copy; OpenStreetMap · CARTO · meteo Open-Meteo"
@@ -155,14 +152,19 @@ export function MushroomMap({
             center={[zone.lat, zone.lon]}
             radius={zone.radiusM}
             pathOptions={{
-              color: selected ? "#1f2a24" : color,
-              weight: selected ? 3 : 1.6,
+              color: selected ? "#f4efe4" : color,
+              weight: selected ? 3 : 2,
               fillColor: color,
-              fillOpacity: selected ? Math.min(fill + 0.12, 0.55) : fill,
+              fillOpacity: selected ? Math.min(fill + 0.18, 0.62) : fill,
             }}
-            eventHandlers={{ click: () => onSelect(zone.id) }}
+            eventHandlers={{
+              click: (event) => {
+                onSelect(zone.id);
+                event.target.openPopup();
+              },
+            }}
           >
-            <Tooltip direction="top" offset={[0, -8]}>
+            <Tooltip direction="top" offset={[0, -8]} sticky>
               <div className="max-w-56">
                 <div className="font-medium">{zone.frazione}</div>
                 <span className="block text-xs opacity-80">
@@ -178,7 +180,7 @@ export function MushroomMap({
               </div>
             </Tooltip>
             <Popup>
-              <div className="max-h-64 overflow-auto text-sm">
+              <div className="max-h-64 max-w-64 overflow-auto text-sm">
                 <p className="font-medium">{zone.frazione}</p>
                 <p className="text-xs opacity-80">
                   {TREE_LABEL[zone.treeKind]} · {zone.edge ? "frangente" : "interno bosco"} ·{" "}
@@ -242,7 +244,7 @@ export function MushroomMap({
         );
       })}
       <FitView zones={zones} scope={scope} />
-      <FlyTo zone={zones.find((zone) => zone.id === selectedId) ?? null} />
+      <FlyTo zone={zones.find((zone) => zone.id === flyToId) ?? null} />
     </MapContainer>
   );
 }
