@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import L from "leaflet";
 import {
   Circle,
@@ -8,23 +8,19 @@ import {
   MapContainer,
   Popup,
   TileLayer,
-  Tooltip,
   useMap,
 } from "react-leaflet";
 import { HOME } from "@/lib/geo";
 import { inMassaBbox, stationSizeOf } from "@/lib/stations";
-import { groupedTaxa } from "@/lib/taxa";
-import { SPECIES } from "@/lib/species";
 import { TREE_COLOR, TREE_LABEL } from "@/lib/trees";
-import type { SpeciesId, StationObservation } from "@/lib/types";
+import type { StationObservation } from "@/lib/types";
 import type { MapZone } from "@/lib/zones";
 import "leaflet/dist/leaflet.css";
 
 export type StationFilter = "tutte" | "grandi" | "piccole" | "nessuna";
 
 function zoneBounds(zone: MapZone) {
-  const southWest = L.latLng(zone.lat, zone.lon).toBounds(zone.radiusM * 2);
-  return southWest;
+  return L.latLng(zone.lat, zone.lon).toBounds(zone.radiusM * 2);
 }
 
 function FitView({
@@ -67,9 +63,18 @@ function FitView({
 function StationPane() {
   const map = useMap();
   useEffect(() => {
-    if (map.getPane("stations")) return;
-    const pane = map.createPane("stations");
-    pane.style.zIndex = "650";
+    if (!map.getPane("stations")) {
+      const pane = map.createPane("stations");
+      pane.style.zIndex = "650";
+    }
+    if (!map.getPane("woods")) {
+      const pane = map.createPane("woods");
+      pane.style.zIndex = "450";
+    }
+    if (!map.getPane("wood-hits")) {
+      const pane = map.createPane("wood-hits");
+      pane.style.zIndex = "460";
+    }
   }, [map]);
   return null;
 }
@@ -90,26 +95,133 @@ function FlyTo({ zone }: { zone: MapZone | null }) {
   return null;
 }
 
-export function MushroomMap({
+const WoodCircle = memo(function WoodCircle({
+  zone,
+  selected,
+  onInspect,
+  onSelect,
+}: {
+  zone: MapZone;
+  selected: boolean;
+  onInspect: (id: string | null) => void;
+  onSelect: (id: string) => void;
+}) {
+  const color = TREE_COLOR[zone.treeKind];
+  const fill = 0.22 + Math.min(zone.probability, 90) / 180;
+  const center = useMemo(() => [zone.lat, zone.lon] as [number, number], [zone.lat, zone.lon]);
+  const leaveTimer = useRef<number>(0);
+
+  const paint = useCallback(
+    (layer: L.Path, hover: boolean) => {
+      layer.setStyle({
+        color: hover || selected ? "#f4efe4" : color,
+        weight: hover ? 4 : selected ? 3 : 2,
+        fillColor: color,
+        fillOpacity: hover ? Math.min(fill + 0.22, 0.75) : selected ? Math.min(fill + 0.18, 0.62) : fill,
+      });
+    },
+    [color, fill, selected],
+  );
+
+  const eventHandlers = useMemo(
+    () => ({
+      mouseover: (event: L.LeafletMouseEvent) => {
+        window.clearTimeout(leaveTimer.current);
+        event.target.bringToFront();
+        paint(event.target, true);
+        onInspect(zone.id);
+      },
+      mouseout: (event: L.LeafletMouseEvent) => {
+        paint(event.target, false);
+        window.clearTimeout(leaveTimer.current);
+        leaveTimer.current = window.setTimeout(() => onInspect(null), 80);
+      },
+      click: (event: L.LeafletMouseEvent) => {
+        window.clearTimeout(leaveTimer.current);
+        L.DomEvent.stopPropagation(event.originalEvent);
+        onInspect(zone.id);
+        onSelect(zone.id);
+      },
+    }),
+    [onInspect, onSelect, paint, zone.id],
+  );
+
+  const areaStyle = useMemo(
+    () => ({
+      color: selected ? "#f4efe4" : color,
+      weight: selected ? 3 : 2,
+      fillColor: color,
+      fillOpacity: selected ? Math.min(fill + 0.18, 0.62) : fill,
+      className: "wood-circle",
+    }),
+    [color, fill, selected],
+  );
+
+  const hitStyle = useMemo(
+    () => ({
+      color: "#1f2a24",
+      weight: selected ? 2 : 1,
+      fillColor: color,
+      fillOpacity: 0.95,
+      className: "wood-circle",
+    }),
+    [color, selected],
+  );
+
+  return (
+    <>
+      <Circle
+        center={center}
+        radius={zone.radiusM}
+        pane="woods"
+        pathOptions={areaStyle}
+        eventHandlers={eventHandlers}
+      />
+      <CircleMarker
+        center={center}
+        radius={selected ? 11 : 9}
+        pane="wood-hits"
+        pathOptions={hitStyle}
+        eventHandlers={eventHandlers}
+      >
+        <Popup className="wood-popup" closeButton>
+          <div className="wood-popup-body">
+            <p className="wood-popup-title">{zone.frazione}</p>
+            <p>
+              {TREE_LABEL[zone.treeKind]} · {zone.edge ? "frangente" : "interno"} · {zone.aspect} ·{" "}
+              {Math.round(zone.probability)}%
+            </p>
+            <p>Dettaglio anche nella scheda in alto a sinistra.</p>
+          </div>
+        </Popup>
+      </CircleMarker>
+    </>
+  );
+});
+
+export const MushroomMap = memo(function MushroomMap({
   zones,
   selectedId,
   flyToId,
-  speciesFilter,
   scope,
   stations,
   stationFilter,
+  onInspect,
   onSelect,
 }: {
   zones: MapZone[];
   selectedId: string | null;
   flyToId: string | null;
-  speciesFilter: SpeciesId | "tutti";
   scope: "massa-carrara" | "italia";
   stations: StationObservation[];
   stationFilter: StationFilter;
+  onInspect: (id: string | null) => void;
   onSelect: (id: string) => void;
 }) {
-  const drawOrder = [...zones].sort((a, b) => a.probability - b.probability);
+  const drawOrder = useMemo(
+    () => [...zones].sort((a, b) => a.probability - b.probability),
+    [zones],
+  );
   const visibleStations = stations.filter((station) => {
     if (stationFilter === "nessuna") return false;
     const size = stationSizeOf(station);
@@ -137,74 +249,22 @@ export function MushroomMap({
         radius={9}
         pathOptions={{ color: "#1f2a24", weight: 2, fillColor: "#f4efe4", fillOpacity: 1 }}
       >
-        <Tooltip direction="right">Massa · casa</Tooltip>
+        <Popup>
+          <div className="wood-popup-body">
+            <p className="wood-popup-title">Massa · casa</p>
+          </div>
+        </Popup>
       </CircleMarker>
       <StationPane />
-      {drawOrder.map((zone) => {
-        const color = TREE_COLOR[zone.treeKind];
-        const selected = zone.id === selectedId;
-        const taxa = groupedTaxa(zone.treeKinds, speciesFilter === "tutti" ? "tutti" : speciesFilter);
-        const woods = groupedTaxa(zone.treeKinds);
-        const fill = 0.16 + Math.min(zone.probability, 90) / 220;
-        return (
-          <Circle
-            key={zone.id}
-            center={[zone.lat, zone.lon]}
-            radius={zone.radiusM}
-            pathOptions={{
-              color: selected ? "#f4efe4" : color,
-              weight: selected ? 3 : 2,
-              fillColor: color,
-              fillOpacity: selected ? Math.min(fill + 0.18, 0.62) : fill,
-            }}
-            eventHandlers={{
-              click: (event) => {
-                onSelect(zone.id);
-                event.target.openPopup();
-              },
-            }}
-          >
-            <Tooltip direction="top" offset={[0, -8]} sticky>
-              <div className="max-w-56">
-                <div className="font-medium">{zone.frazione}</div>
-                <span className="block text-xs opacity-80">
-                  {TREE_LABEL[zone.treeKind]} · {zone.edge ? "frangente" : "interno"} ·{" "}
-                  {zone.aspect} · {Math.round(zone.probability)}%
-                </span>
-                {woods.slice(0, 3).map((row) => (
-                  <p key={row.group} className="mt-0.5 text-[11px] leading-snug">
-                    <span className="opacity-70">{row.label}: </span>
-                    {row.taxa.map((taxon) => taxon.latinName).join(", ")}
-                  </p>
-                ))}
-              </div>
-            </Tooltip>
-            <Popup>
-              <div className="max-h-64 max-w-64 overflow-auto text-sm">
-                <p className="font-medium">{zone.frazione}</p>
-                <p className="text-xs opacity-80">
-                  {TREE_LABEL[zone.treeKind]} · {zone.edge ? "frangente" : "interno bosco"} ·{" "}
-                  {zone.aspect} · {Math.round(zone.probability)}% · {zone.elevationM} m
-                </p>
-                {(speciesFilter === "tutti" ? woods : taxa).map((row) => (
-                  <div key={row.group} className="mt-1.5">
-                    <p className="text-xs font-medium" style={{ color: SPECIES[row.group].color }}>
-                      {row.label}
-                    </p>
-                    <ul className="text-xs">
-                      {row.taxa.map((taxon) => (
-                        <li key={taxon.id}>
-                          <em>{taxon.latinName}</em> — {taxon.commonName}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            </Popup>
-          </Circle>
-        );
-      })}
+      {drawOrder.map((zone) => (
+        <WoodCircle
+          key={zone.id}
+          zone={zone}
+          selected={zone.id === selectedId}
+          onInspect={onInspect}
+          onSelect={onSelect}
+        />
+      ))}
       {visibleStations.map((station) => {
         const grande = stationSizeOf(station) === "grande";
         return (
@@ -227,12 +287,12 @@ export function MushroomMap({
             }}
           >
             <Popup>
-              <div className="text-sm">
-                <p className="font-medium">{station.name}</p>
-                <p className="text-xs opacity-80">
+              <div className="wood-popup-body">
+                <p className="wood-popup-title">{station.name}</p>
+                <p>
                   {grande ? "Stazione grande" : "Stazione piccola"} · {station.network}
                 </p>
-                <p className="mt-1 text-xs">
+                <p>
                   {station.precip7dMm != null ? `Pioggia 7g ${station.precip7dMm} mm` : "Pioggia n/d"}
                   {station.windMaxKmh != null ? ` · vento ${station.windMaxKmh} km/h` : ""}
                   {station.tempC != null ? ` · ${station.tempC} °C` : ""}
@@ -247,4 +307,4 @@ export function MushroomMap({
       <FlyTo zone={zones.find((zone) => zone.id === flyToId) ?? null} />
     </MapContainer>
   );
-}
+});
