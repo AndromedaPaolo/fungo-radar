@@ -155,6 +155,7 @@ export async function fetchAllSiteWeather(
 ): Promise<{ weathers: SiteWeather[]; stations: StationObservation[] }> {
   const siteCells = new Map<string, { lat: number; lon: number }>();
   for (const site of sites) {
+    if (site.hotspot === "italia" && site.kind !== "named") continue;
     const key = cellKey(site.lat, site.lon);
     if (!siteCells.has(key)) siteCells.set(key, parseKey(key));
   }
@@ -250,9 +251,30 @@ export async function fetchAllSiteWeather(
     });
   }
 
+  const packedCoords = [...cellWeather.entries()].map(([key, packed]) => ({
+    key,
+    lat: parseKey(key).lat,
+    lon: parseKey(key).lon,
+    packed,
+  }));
+
+  function packedNear(lat: number, lon: number) {
+    const direct = cellWeather.get(cellKey(lat, lon));
+    if (direct) return direct;
+    let best = Infinity;
+    let hit: (typeof packedCoords)[number]["packed"] | undefined;
+    for (const cell of packedCoords) {
+      const d = haversine(lat, lon, cell.lat, cell.lon);
+      if (d < best) {
+        best = d;
+        hit = cell.packed;
+      }
+    }
+    return hit;
+  }
+
   const weathers = sites.map((site) => {
-    const key = cellKey(site.lat, site.lon);
-    const packed = cellWeather.get(key);
+    const packed = packedNear(site.lat, site.lon);
     const daily = packed ?? {
       dates: [],
       precipMm: [],
@@ -277,7 +299,7 @@ export async function fetchAllSiteWeather(
       : undefined;
     return {
       siteId: site.id,
-      elevationM: packed?.elevationM ?? 0,
+      elevationM: site.elevationM ?? packed?.elevationM ?? 0,
       timezone: "Europe/Rome",
       daily,
       sources: [
