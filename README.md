@@ -19,8 +19,8 @@ Il bollettino del giorno sta in `data/bulletin/` (parti da 4 KB), così il deplo
 - **Frangente e versante**: nord/sud/est/ovest e orlo vs interno hanno probabilità diverse.
 - **Filtri**: gruppi (Porcini, Colombine, Russole, Galletti, Mazze), tipo di bosco, zona, versante, frangente.
 - **Specie commestibili**: porcini (*Boletus edulis, aestivalis, aereus, pinophilus*), colombine (*Amanita vaginata, fulva…*), russole dolci (*R. cyanoxantha, virescens, vesca…*), galletti e finferli (*Cantharellus, Craterellus*), mazze (*Macrolepiota procera, mastoidea*). Solo commestibili; le russole acre non ci sono.
-- **Stazioni grandi**: tutta la rete IT__ASOS / Aeronautica Militare (aeroporti, capi, valichi, cime).
-- **Stazioni piccole**: crinali e boschi (Pasquilio, Campocecina, Cerreto, Paneveggio, Foresta Umbra, Lorica…).
+- **Stazioni grandi**: tutta la rete IT__ASOS / Aeronautica Militare (aeroporti, capi, valichi, cime) su tutta Italia.
+- **Stazioni piccole**: crinali, valichi e boschi in ogni regione (Apuane e Lunigiana dense come a Massa; Alpi, Appennino, Gargano, Sila, Etna, Gennargentu…).
 - Probabilità per porcini, colombine, russole, galletti e mazze di tamburo.
 
 ## Avvio locale
@@ -43,7 +43,7 @@ Apri [http://127.0.0.1:43123](http://127.0.0.1:43123).
 | Controllo pioggia | DWD ICON Seamless |
 | Suolo 0–7 e 7–28 cm | Open-Meteo IFS / ERA5-Land |
 | Stazioni grandi | Aeronautica Militare via Iowa Environmental Mesonet (`IT__ASOS`) |
-| Nodi piccoli | ICON-2I sui crinali e nei boschi |
+| Nodi piccoli | ICON-2I sui crinali e nei boschi di tutta Italia |
 | Vegetazione forestale Toscana | Geoscopio WMS `rt_ucs.idvegfor.rt` |
 | Quota | DEM Open-Meteo interpolato |
 
