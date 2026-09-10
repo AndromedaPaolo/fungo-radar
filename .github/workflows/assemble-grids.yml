@@ -1,0 +1,43 @@
+name: Assemble Massa JSON grids
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/assemble-grids.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Concatenate upload parts
+        run: |
+          set -euo pipefail
+          mkdir -p data
+          cat .upload-parts/data__grid-massa.json.part00 \
+              .upload-parts/data__grid-massa.json.part01 \
+              .upload-parts/data__grid-massa.json.part02 \
+              .upload-parts/data__grid-massa.json.part03 \
+            > data/grid-massa.json
+          cat .upload-parts/data__hotspot-pariana-pasquilio.json.part00 \
+              .upload-parts/data__hotspot-pariana-pasquilio.json.part01 \
+              .upload-parts/data__hotspot-pariana-pasquilio.json.part02 \
+              .upload-parts/data__hotspot-pariana-pasquilio.json.part03 \
+              .upload-parts/data__hotspot-pariana-pasquilio.json.part04 \
+            > data/hotspot-pariana-pasquilio.json
+          echo "71ebf92deaba7ee420b82b2b8a30d1e2a179deeaf50522444718c8a1612f24e4  data/grid-massa.json" | sha256sum -c
+          echo "77b6405df49474a5321045e95eef4ffbd3c31471bacd3e961e7a8732b0503c49  data/hotspot-pariana-pasquilio.json" | sha256sum -c
+          wc -c data/grid-massa.json data/hotspot-pariana-pasquilio.json
+      - name: Commit assembled files
+        run: |
+          git config user.name "spora-bot"
+          git config user.email "spora-bot@users.noreply.github.com"
+          git add data/grid-massa.json data/hotspot-pariana-pasquilio.json
+          git diff --cached --quiet && echo "Nessun cambiamento" && exit 0
+          git commit -m "Add Massa woodland grid and Pariana hotspot for Vercel."
+          git push
