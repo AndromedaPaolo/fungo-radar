@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import {
   Circle,
@@ -58,6 +58,70 @@ function FitView({
   }, [key, map, scope, zones]);
 
   return null;
+}
+
+function stationRadii(zoom: number) {
+  if (zoom <= 6) return { grande: 7, piccola: 4.5 };
+  if (zoom <= 8) return { grande: 7, piccola: 5 };
+  return { grande: 8, piccola: 5 };
+}
+
+function StationMarkers({ stations }: { stations: StationObservation[] }) {
+  const map = useMap();
+  const [zoom, setZoom] = useState(map.getZoom());
+
+  useEffect(() => {
+    const onZoom = () => setZoom(map.getZoom());
+    map.on("zoomend", onZoom);
+    return () => {
+      map.off("zoomend", onZoom);
+    };
+  }, [map]);
+
+  const radii = stationRadii(zoom);
+
+  return (
+    <>
+      {stations.map((station) => {
+        const grande = stationSizeOf(station) === "grande";
+        return (
+          <CircleMarker
+            key={`st-${station.id}`}
+            center={[station.lat, station.lon]}
+            radius={grande ? radii.grande : radii.piccola}
+            pane="stations"
+            bubblingMouseEvents={false}
+            pathOptions={{
+              color: "#1f2a24",
+              weight: grande ? 2 : zoom <= 7 ? 1.5 : 1,
+              fillColor: grande ? "#7eb6d9" : "#d4b56a",
+              fillOpacity: 1,
+            }}
+            eventHandlers={{
+              click: (event) => {
+                L.DomEvent.stopPropagation(event.originalEvent);
+              },
+            }}
+          >
+            <Popup>
+              <div className="wood-popup-body">
+                <p className="wood-popup-title">{station.name}</p>
+                <p>
+                  {grande ? "Stazione grande" : "Stazione piccola"} · {station.network}
+                </p>
+                <p>
+                  {station.precip7dMm != null ? `Pioggia 7g ${station.precip7dMm} mm` : "Pioggia n/d"}
+                  {station.windMaxKmh != null ? ` · vento ${station.windMaxKmh} km/h` : ""}
+                  {station.tempC != null ? ` · ${station.tempC} °C` : ""}
+                  {station.humidity != null ? ` · umidità ${station.humidity}%` : ""}
+                </p>
+              </div>
+            </Popup>
+          </CircleMarker>
+        );
+      })}
+    </>
+  );
 }
 
 function StationPane() {
@@ -265,44 +329,7 @@ export const MushroomMap = memo(function MushroomMap({
           onSelect={onSelect}
         />
       ))}
-      {visibleStations.map((station) => {
-        const grande = stationSizeOf(station) === "grande";
-        return (
-          <CircleMarker
-            key={`st-${station.id}`}
-            center={[station.lat, station.lon]}
-            radius={grande ? 8 : 5}
-            pane="stations"
-            bubblingMouseEvents={false}
-            pathOptions={{
-              color: "#1f2a24",
-              weight: grande ? 2 : 1,
-              fillColor: grande ? "#7eb6d9" : "#d4b56a",
-              fillOpacity: 1,
-            }}
-            eventHandlers={{
-              click: (event) => {
-                L.DomEvent.stopPropagation(event.originalEvent);
-              },
-            }}
-          >
-            <Popup>
-              <div className="wood-popup-body">
-                <p className="wood-popup-title">{station.name}</p>
-                <p>
-                  {grande ? "Stazione grande" : "Stazione piccola"} · {station.network}
-                </p>
-                <p>
-                  {station.precip7dMm != null ? `Pioggia 7g ${station.precip7dMm} mm` : "Pioggia n/d"}
-                  {station.windMaxKmh != null ? ` · vento ${station.windMaxKmh} km/h` : ""}
-                  {station.tempC != null ? ` · ${station.tempC} °C` : ""}
-                  {station.humidity != null ? ` · umidità ${station.humidity}%` : ""}
-                </p>
-              </div>
-            </Popup>
-          </CircleMarker>
-        );
-      })}
+      <StationMarkers stations={visibleStations} />
       <FitView zones={zones} scope={scope} />
       <FlyTo zone={zones.find((zone) => zone.id === flyToId) ?? null} />
     </MapContainer>
