@@ -36,6 +36,7 @@ import { AREAS, kmFromHome, type ZoneId } from "@/lib/geo";
 import { daysLabel, formatWhen, probabilityColor, statusLabel } from "@/lib/format";
 import { TREE_COLOR, TREE_KINDS, TREE_LABEL, treeKindOf } from "@/lib/trees";
 import { isParianaSite } from "@/lib/hotspots";
+import { expandItalySnapshot } from "@/lib/expand-italy";
 import { mergeCatalogWithObservations } from "@/lib/stations";
 import { ASPECT_LABEL, ASPECTS, clusterZones, type MapZone } from "@/lib/zones";
 import type { Aspect, ForecastSnapshot, SpeciesId, TreeKind } from "@/lib/types";
@@ -78,9 +79,15 @@ export function Dashboard({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [error, setError] = useState(loadError ?? null);
 
+  const displaySnapshot = useMemo(() => {
+    if (!snapshot) return null;
+    if (scope !== "italia") return snapshot;
+    return expandItalySnapshot(snapshot);
+  }, [snapshot, scope]);
+
   const scoped = useMemo(() => {
-    if (!snapshot) return [];
-    return snapshot.sites
+    if (!displaySnapshot) return [];
+    return displaySnapshot.sites
       .filter((site) => (scope === "italia" ? !site.site.local : site.site.local))
       .filter((site) => {
         if (area === "tutte") return true;
@@ -110,11 +117,21 @@ export function Dashboard({
         const blob = `${site.site.name} ${site.site.comune ?? ""} ${site.site.habitat} ${kind} ${taxa}`.toLowerCase();
         return blob.includes(query.trim().toLowerCase());
       });
-  }, [snapshot, scope, area, query, treeKinds, aspectFilter, edgeFilter]);
+  }, [displaySnapshot, scope, area, query, treeKinds, aspectFilter, edgeFilter]);
 
   const zones = useMemo(() => {
     return clusterZones(scoped, speciesFilter).filter((zone) => zone.probability >= minProb);
   }, [scoped, speciesFilter, minProb]);
+
+  const listZones = useMemo(() => {
+    if (scope !== "italia") return zones;
+    const best = new Map<string, MapZone>();
+    for (const zone of zones) {
+      const prev = best.get(zone.frazione);
+      if (!prev || zone.probability > prev.probability) best.set(zone.frazione, zone);
+    }
+    return [...best.values()].sort((a, b) => b.probability - a.probability);
+  }, [scope, zones]);
 
   const mapStations = useMemo(
     () => mergeCatalogWithObservations(snapshot?.stations),
@@ -174,8 +191,8 @@ export function Dashboard({
               Spora
             </h1>
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-              Un cerchio per frazione, tipo di bosco e versante — senza sovrapposizioni. Il colore
-              è il bosco, l’opacità la probabilità.
+              Un cerchio per frazione, tipo di bosco e versante — a Massa e in tutta Italia, senza
+              sovrapposizioni. Il colore è il bosco, l’opacità la probabilità.
             </p>
           </div>
           <div className="flex flex-col items-end gap-1 text-right text-xs text-muted-foreground">
@@ -236,7 +253,7 @@ export function Dashboard({
                     ))}
                   </>
                 ) : (
-                  <SelectItem value="hotspot-italia">Boschi d’Italia</SelectItem>
+                  <SelectItem value="hotspot-italia">Boschi e versanti d’Italia</SelectItem>
                 )}
               </SelectContent>
             </Select>
@@ -353,9 +370,11 @@ export function Dashboard({
             />
           </div>
           <p className="text-sm text-muted-foreground">
-            {zones.length} boschi
+            {scope === "italia"
+              ? `${listZones.length} frazioni · ${zones.length} versanti`
+              : `${zones.length} boschi`}
             {snapshot
-              ? ` · ${snapshot.summary.sitesScanned} letti · ${mapStations.length} stazioni`
+              ? ` · ${displaySnapshot?.summary.sitesScanned ?? snapshot.summary.sitesScanned} letti · ${mapStations.length} stazioni`
               : null}
           </p>
         </div>
@@ -488,7 +507,7 @@ export function Dashboard({
 
         <aside className="hidden min-h-0 border-l border-border bg-card lg:flex lg:flex-col">
           <SiteColumn
-            zones={zones}
+            zones={listZones}
             selected={selected}
             speciesFilter={speciesFilter}
             onSelect={(id) => {
@@ -508,7 +527,7 @@ export function Dashboard({
             <SheetTitle>Boschi e condizioni</SheetTitle>
           </SheetHeader>
           <SiteColumn
-            zones={zones}
+            zones={listZones}
             selected={selected}
             speciesFilter={speciesFilter}
             onSelect={(id) => {
@@ -773,8 +792,8 @@ function SiteDetail({
 
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           Fonti: ICON-2I ItaliaMeteo 2 km, ICON, suolo ERA5-Land, stazioni AM di tutta Italia e
-          nodi piccoli di crinale in tutte le regioni. Il cerchio è un bosco di una frazione, sul
-          versante indicato. Non si sovrappone agli altri. Non è un GPS del fungo.
+          nodi piccoli di crinale. I cerchi in Italia usano lo stesso schema di Massa: frazione,
+          tipo di bosco, versante e orlo. Non è un GPS del fungo.
         </p>
       </div>
     </div>
