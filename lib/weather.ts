@@ -1,6 +1,7 @@
 import { fetchIemStations } from "./iem";
 import { ALL_STATIONS, haversine, nearestStation } from "./stations";
 import { HOME } from "./geo";
+import { fetchOpenMeteoJson, sleep } from "./open-meteo";
 import type { DailySeries, Site, SiteWeather, StationObservation } from "./types";
 
 const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
@@ -53,24 +54,6 @@ function meanChunk(values: number[], dates: string[]) {
     if (list.length === 0) return 0;
     return list.reduce((a, b) => a + b, 0) / list.length;
   };
-}
-
-async function sleep(ms: number) {
-  await new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function fetchJson(url: string, attempt = 0): Promise<unknown> {
-  const response = await fetch(url, {
-    headers: { Accept: "application/json" },
-    cache: "no-store",
-    signal: AbortSignal.timeout(28000),
-  });
-  if (response.status === 429 && attempt < 5) {
-    await sleep(1500 * (attempt + 1));
-    return fetchJson(url, attempt + 1);
-  }
-  if (!response.ok) throw new Error(`Open-Meteo ${response.status}`);
-  return response.json();
 }
 
 function chunk<T>(items: T[], size: number): T[][] {
@@ -172,11 +155,11 @@ export async function fetchAllSiteWeather(
   for (const group of chunk(siteList, BATCH)) {
     const lats = group.map((c) => c.lat);
     const lons = group.map((c) => c.lon);
-    const best = await fetchJson(buildUrl({ soil: true })(lats, lons));
+    const best = await fetchOpenMeteoJson(buildUrl({ soil: true })(lats, lons));
     await sleep(250);
-    const icon = await fetchJson(buildUrl({ models: "icon_seamless" })(lats, lons));
+    const icon = await fetchOpenMeteoJson(buildUrl({ models: "icon_seamless" })(lats, lons));
     await sleep(250);
-    const local = await fetchJson(
+    const local = await fetchOpenMeteoJson(
       buildUrl({ models: "italia_meteo_arpae_icon_2i", local: true })(lats, lons),
     ).catch(() => null);
     await sleep(400);
@@ -207,7 +190,7 @@ export async function fetchAllSiteWeather(
   for (const group of chunk(stationList, 40)) {
     const lats = group.map((c) => c.lat);
     const lons = group.map((c) => c.lon);
-    const local = await fetchJson(
+    const local = await fetchOpenMeteoJson(
       buildUrl({ models: "italia_meteo_arpae_icon_2i", local: true })(lats, lons),
     ).catch(() => null);
     await sleep(280);

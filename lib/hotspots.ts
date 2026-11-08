@@ -1,6 +1,7 @@
 import { haversine } from "./stations";
 import { MASSA_SITES } from "./sites-massa";
 import { classifyTree, habitatFromTree, inParianaPasquilio } from "./trees";
+import { fetchOpenMeteoJson } from "./open-meteo";
 import type { Aspect, Site, TreeKind } from "./types";
 
 export const PARIANA_BOX = {
@@ -39,12 +40,9 @@ async function fetchElevations(lats: number[], lons: number[]): Promise<number[]
     latitude: lats.join(","),
     longitude: lons.join(","),
   });
-  const response = await fetch(`https://api.open-meteo.com/v1/elevation?${params}`, {
-    cache: "no-store",
-    signal: AbortSignal.timeout(20000),
-  });
-  if (!response.ok) throw new Error(`Elevation ${response.status}`);
-  const payload = (await response.json()) as { elevation?: number[] };
+  const payload = (await fetchOpenMeteoJson(
+    `https://api.open-meteo.com/v1/elevation?${params}`,
+  )) as { elevation?: number[] };
   return payload.elevation ?? lats.map(() => 0);
 }
 
