@@ -56,7 +56,7 @@ try {
 }
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["leaflet"],
+  serverExternalPackages: ["leaflet", "undici"],
   outputFileTracingIncludes: {
     "*": [
       "./data/latest.json.gz",
